@@ -1,58 +1,135 @@
-# CampusOS starter — existing UI + Python API
+# CampusOS — NIT Hamirpur Student Companion
 
-This starter keeps the reviewed CampusOS HTML and the map tile fallback patch. It adds a small FastAPI backend and SQLite database. The current frontend is **not yet wired to the API**: its existing interactions and localStorage behavior remain in place while you verify the backend first.
+A locally-runnable student companion for NIT Hamirpur, built with:
+- **Frontend**: HTML + React (Babel in-browser) + Tailwind CSS — all vendor files bundled locally, no CDN required at runtime
+- **Backend**: Python · FastAPI · Uvicorn · SQLite
+- **AI**: Gemma 4 E4B via Ollama (optional, local)
+- **Campus map**: Native 3D map built with Three.js and OrbitControls — no external tile service, no API key
 
-## Requirements
-- Windows 10/11
-- Python 3.11 or newer (Python 3.12 is a safe choice)
-- Internet access for the HTML's existing CDN libraries and map tiles
+---
 
-## 1. Run it on Windows
-Open this folder in VS Code, then open **Terminal → New Terminal**. Run each command separately:
+## Quick start (Windows)
+
+### Option A — One-click launch (recommended)
+```
+Double-click:  run_campusos.bat
+```
+This creates a Python virtual environment, installs dependencies, starts the server, and opens Chrome.
+
+### Option B — Manual
 
 ```powershell
-py -m venv .venv
-.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-pip install -r requirements.txt
-python -m uvicorn app:app --reload
+# 1. Create and activate virtual environment
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+
+# 2. Install dependencies
+pip install fastapi "uvicorn[standard]" pydantic httpx
+
+# 3. Start server
+python -m uvicorn app:app --host 127.0.0.1 --port 8000 --reload
+
+# 4. Open in Chrome
+start chrome http://127.0.0.1:8000
 ```
 
-If PowerShell blocks activation, use Command Prompt terminal and run:
+### Enable Gemma AI (optional)
 
-```bat
-.venv\Scripts\activate.bat
+If you have Ollama installed with `gemma4:e4b` already downloaded:
+
+```powershell
+# In a separate terminal
+ollama serve
 ```
 
-Leave the terminal running. Open these URLs in Chrome:
-- CampusOS UI: http://127.0.0.1:8000/
-- Health check: http://127.0.0.1:8000/api/health
-- Interactive API docs: http://127.0.0.1:8000/docs
+The "Summarize with Gemma AI" button in Study Studio will become active automatically.
 
-Use `Ctrl+C` in the terminal to stop the server.
+---
 
-## 2. Test database-backed endpoints
-In Chrome, open http://127.0.0.1:8000/docs. Try `POST /api/memories` with:
+## Project structure
 
-```json
-{
-  "title": "Test campus memory",
-  "description": "Checking that SQLite saves data",
-  "category": "Campus",
-  "latitude": 31.7083,
-  "longitude": 76.5273,
-  "image_url": ""
-}
+```
+CampusOS/
+├── app.py                   ← FastAPI application (all API routes)
+├── database.py              ← SQLite schema, init, seed data
+├── config.py                ← Configuration constants
+├── ai_adapter.py            ← Ollama / Gemma inference wrapper
+├── requirements.txt         ← Python dependencies
+├── run_campusos.bat         ← One-click Windows startup script
+├── .env.example             ← Configuration reference
+│
+├── static/
+│   ├── index.html           ← Main frontend (React + Tailwind, single file)
+│   ├── campus_map_3d.html   ← Native 3D campus map (Three.js, no CDN)
+│   ├── data/
+│   │   └── campus_data.json ← Verified NIT Hamirpur campus locations
+│   └── vendor/              ← Locally bundled JS (React, Babel, Tailwind, Three.js)
+│
+└── tests/
+    └── test_api.py          ← Automated API tests (pytest)
 ```
 
-Then use `GET /api/memories`. Stop and restart the server and check again: the record should remain because it is stored in `campusos.db`.
+---
 
-Also test `POST /api/posts`, `GET /api/posts`, `POST /api/tasks`, and `GET /api/tasks` from `/docs`.
+## API endpoints
 
-## What is and isn't implemented
-- Implemented: local FastAPI server, SQLite tables for memories/posts/tasks, basic CRUD/create/list routes, validation, API docs.
-- Not yet implemented: frontend-to-API wiring, login, real user profiles, permissions, image upload/storage, Gemma integration, production hosting.
-- Do not put real private student information into this prototype. It has no authentication or per-user access control yet.
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/health` | Server and database health check |
+| GET | `/api/campus/data` | Campus locations and road data |
+| GET/POST | `/api/memories` | Campus memories (CRUD) |
+| PATCH | `/api/memories/{id}/like` | Like a memory |
+| DELETE | `/api/memories/{id}` | Delete a memory |
+| GET/POST | `/api/posts` | Community posts |
+| POST | `/api/posts/{id}/reply` | Add a reply |
+| PATCH | `/api/posts/{id}/vote` | Upvote a post |
+| GET/POST | `/api/tasks` | Tasks |
+| PATCH | `/api/tasks/{id}/toggle` | Toggle task completion |
+| GET/POST | `/api/events` | Campus events |
+| PATCH | `/api/events/{id}/rsvp` | RSVP to an event |
+| GET | `/api/ai/status` | Check Gemma/Ollama availability |
+| POST | `/api/ai/summarize` | AI note summarization via Gemma |
+| POST | `/api/ai/question` | AI question answering |
 
-## Next integration milestone
-Once `/api/health` works, connect one UI feature at a time using `fetch('/api/memories')`, then wire memory creation to `POST /api/memories`. Keep the existing `localStorage` behavior as a fallback until the API path is tested. Do not rewrite the whole HTML or remove the map fallback.
+Interactive API docs: `http://127.0.0.1:8000/docs`
+
+---
+
+## Running tests
+
+```powershell
+.\venv\Scripts\python -m pytest tests/ -v
+```
+
+---
+
+## Campus map
+
+The 3D campus map (`static/campus_map_3d.html`) uses:
+- **Three.js r128** — bundled locally at `static/vendor/three.min.js`
+- **OrbitControls** — bundled locally at `static/vendor/OrbitControls.js`
+- **Campus data** — `static/data/campus_data.json` (15 verified NIT Hamirpur locations)
+
+No internet connection is required to render the map. Building positions are based on verified campus landmarks and are clearly marked as approximate layout references, not survey-accurate coordinates.
+
+To add or correct a campus location, edit `static/data/campus_data.json`.
+
+---
+
+## AI integration
+
+| Component | Status |
+|-----------|--------|
+| Ollama | Installed at `C:\Users\mandy\AppData\Local\Programs\Ollama\ollama.exe` |
+| Model | `gemma4:e4b` (6.6 GB) — already downloaded |
+| Inference | Routes through `/api/ai/summarize` (120s timeout) |
+| Fallback | If Ollama is offline, local word-frequency summary is used |
+
+---
+
+## Notes and limitations
+
+- **Sign-in / accounts**: Not connected. This is a local guest mode application.
+- **Building coordinates**: Approximate, based on verified campus landmarks. Not survey-accurate.
+- **Community, market, lost & found**: Currently store in SQLite via the backend.
+- **Profile**: Stored in browser localStorage (client-side preferences only).

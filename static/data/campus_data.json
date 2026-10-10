@@ -1,0 +1,280 @@
+{
+  "campus": {
+    "name": "National Institute of Technology Hamirpur",
+    "shortName": "NIT Hamirpur",
+    "state": "Himachal Pradesh, India",
+    "elevation": "~900 m (Pine-forested sub-Himalayan ridge)",
+    "referenceCoords": {
+      "lat": 31.7083,
+      "lng": 76.5273,
+      "source": "India Post Record (NIT Hamirpur SO 177005)"
+    },
+    "bounds": {
+      "width": 1000,
+      "depth": 700
+    }
+  },
+  "categories": [
+    { "id": "All", "label": "All Locations", "color": "#C8FF45" },
+    { "id": "Academic", "label": "Academic & Labs", "color": "#7DF3E1" },
+    { "id": "Administrative", "label": "Administration", "color": "#FFC24D" },
+    { "id": "Hostels", "label": "Student Hostels", "color": "#FF9F7A" },
+    { "id": "Dining", "label": "Food & Canteen", "color": "#FF7A6B" },
+    { "id": "Sports", "label": "Sports & Fitness", "color": "#A0E060" },
+    { "id": "Spots", "label": "Scenic & Gates", "color": "#E5A4FF" },
+    { "id": "Services", "label": "Campus Services", "color": "#98A099" }
+  ],
+  "locations": [
+    {
+      "id": "loc-admin",
+      "name": "Administrative Block",
+      "shortName": "Admin Block",
+      "category": "Administrative",
+      "coords3d": [ -120, 4, 30 ],
+      "dimensions3d": [ 70, 24, 42 ],
+      "coords2d": { "x": 230, "y": 335, "w": 70, "h": 40 },
+      "description": "Central administrative headquarters housing the Director's Office, Registrar, Dean of Academic Affairs, and Student Welfare sections.",
+      "status": "verified_landmark",
+      "floors": 4,
+      "source": "NIT Hamirpur Campus Directory & Official Map"
+    },
+    {
+      "id": "loc-library",
+      "name": "Central Library",
+      "shortName": "Central Library",
+      "category": "Academic",
+      "coords3d": [ 0, 8, -20 ],
+      "dimensions3d": [ 80, 28, 52 ],
+      "coords2d": { "x": 370, "y": 270, "w": 80, "h": 50 },
+      "description": "Four-storey library facility holding over 100,000 volumes, digital resource centres, study halls, and scenic hill-facing study bays.",
+      "status": "verified_landmark",
+      "floors": 4,
+      "source": "NIT Hamirpur Central Library Records"
+    },
+    {
+      "id": "loc-lhc",
+      "name": "Lecture Hall Complex (LHC)",
+      "shortName": "LHC Complex",
+      "category": "Academic",
+      "coords3d": [ 120, 14, -80 ],
+      "dimensions3d": [ 90, 32, 55 ],
+      "coords2d": { "x": 480, "y": 205, "w": 90, "h": 55 },
+      "description": "Primary multi-tiered lecture theatre complex featuring LHC 101, LHC 204, multimedia seminar halls, and central examination venues.",
+      "status": "verified_landmark",
+      "floors": 4,
+      "source": "NIT Hamirpur Academic Master Plan"
+    },
+    {
+      "id": "loc-cse",
+      "name": "Computer Science & Engineering / Computer Centre",
+      "shortName": "CSE & CC",
+      "category": "Academic",
+      "coords3d": [ 180, 8, 20 ],
+      "dimensions3d": [ 72, 22, 40 ],
+      "coords2d": { "x": 575, "y": 310, "w": 72, "h": 40 },
+      "description": "Houses the Department of CSE, central high-performance computing labs, data centre, and high-speed campus networking infrastructure.",
+      "status": "verified_landmark",
+      "floors": 3,
+      "source": "NIT Hamirpur Department Directory"
+    },
+    {
+      "id": "loc-ece",
+      "name": "Electronics & Communication Engineering",
+      "shortName": "ECE Department",
+      "category": "Academic",
+      "coords3d": [ 80, 10, -140 ],
+      "dimensions3d": [ 68, 20, 38 ],
+      "coords2d": { "x": 440, "y": 145, "w": 68, "h": 38 },
+      "description": "Department of ECE featuring analog electronics, DSP, microwave, VLSI design, and advanced telecommunication laboratories.",
+      "status": "verified_landmark",
+      "floors": 3,
+      "source": "NIT Hamirpur Department Directory"
+    },
+    {
+      "id": "loc-mech",
+      "name": "Mechanical Engineering Department & Workshops",
+      "shortName": "Mechanical Dept",
+      "category": "Academic",
+      "coords3d": [ -40, 6, -110 ],
+      "dimensions3d": [ 75, 18, 44 ],
+      "coords2d": { "x": 330, "y": 160, "w": 75, "h": 40 },
+      "description": "Comprehensive mechanical engineering block including thermal engineering, robotics, CAD/CAM labs, and central fabrication workshops.",
+      "status": "verified_landmark",
+      "floors": 2,
+      "source": "NIT Hamirpur Department Directory"
+    },
+    {
+      "id": "loc-civil",
+      "name": "Civil Engineering Department",
+      "shortName": "Civil Dept",
+      "category": "Academic",
+      "coords3d": [ -120, 2, -70 ],
+      "dimensions3d": [ 64, 18, 38 ],
+      "coords2d": { "x": 240, "y": 180, "w": 64, "h": 38 },
+      "description": "Houses structural testing, geotechnical, surveying, hydraulics, and environmental engineering laboratories.",
+      "status": "verified_landmark",
+      "floors": 3,
+      "source": "NIT Hamirpur Department Directory"
+    },
+    {
+      "id": "loc-auditorium",
+      "name": "Central Auditorium & Open Air Theatre",
+      "shortName": "Auditorium",
+      "category": "Spots",
+      "coords3d": [ 50, 2, 80 ],
+      "dimensions3d": [ 82, 26, 48 ],
+      "coords2d": { "x": 420, "y": 385, "w": 82, "h": 48 },
+      "description": "Main air-conditioned cultural auditorium and amphitheatre for annual festivals (Hillffair, Nimbus), convocations, and guest lectures.",
+      "status": "verified_landmark",
+      "floors": 2,
+      "source": "NIT Hamirpur Facilities Plan"
+    },
+    {
+      "id": "loc-foodcourt",
+      "name": "Student Activity Centre & Food Court",
+      "shortName": "Food Court / SAC",
+      "category": "Dining",
+      "coords3d": [ -150, 4, -40 ],
+      "dimensions3d": [ 65, 16, 40 ],
+      "coords2d": { "x": 205, "y": 225, "w": 65, "h": 38 },
+      "description": "Campus student hub with central cafeteria, bakery, outdoor sitting steps, club meeting rooms, and stationery outlet.",
+      "status": "verified_landmark",
+      "floors": 2,
+      "source": "NIT Hamirpur Campus Facilities"
+    },
+    {
+      "id": "loc-hostels-boys",
+      "name": "Boys' Hostel Enclave (Kailash, Dhauladhar, Shivalik)",
+      "shortName": "Boys' Hostels",
+      "category": "Hostels",
+      "coords3d": [ -250, 10, -180 ],
+      "dimensions3d": [ 95, 30, 55 ],
+      "coords2d": { "x": 95, "y": 115, "w": 85, "h": 48 },
+      "description": "Residential block for undergraduate boys including Kailash, Dhauladhar, Shivalik, Nilgiri, and Vindhyachal hostels with dedicated dining halls.",
+      "status": "verified_landmark",
+      "floors": 4,
+      "source": "NIT Hamirpur Hostel Administration"
+    },
+    {
+      "id": "loc-hostels-girls",
+      "name": "Girls' Hostel Enclave (Parvati & Ambika)",
+      "shortName": "Girls' Hostels",
+      "category": "Hostels",
+      "coords3d": [ -150, 12, -220 ],
+      "dimensions3d": [ 80, 28, 48 ],
+      "coords2d": { "x": 205, "y": 80, "w": 80, "h": 45 },
+      "description": "Secure residential complex for undergraduate and postgraduate women students with badminton court, gymnasium, and library annex.",
+      "status": "verified_landmark",
+      "floors": 4,
+      "source": "NIT Hamirpur Hostel Administration"
+    },
+    {
+      "id": "loc-ground",
+      "name": "Main Sports Ground & Pavilion",
+      "shortName": "Sports Ground",
+      "category": "Sports",
+      "coords3d": [ 240, -4, -180 ],
+      "dimensions3d": [ 120, 8, 80 ],
+      "coords2d": { "x": 650, "y": 120, "w": 110, "h": 70 },
+      "description": "Standard-size athletic sports arena hosting football, cricket, track events, floodlit basketball, and tennis courts against a Himalayan backdrop.",
+      "status": "verified_landmark",
+      "floors": 1,
+      "source": "NIT Hamirpur Sports Board"
+    },
+    {
+      "id": "loc-sunset",
+      "name": "Sunset Point & Scenic Ridge",
+      "shortName": "Sunset Point",
+      "category": "Spots",
+      "coords3d": [ 300, 28, 120 ],
+      "dimensions3d": [ 50, 14, 50 ],
+      "coords2d": { "x": 725, "y": 440, "w": 60, "h": 60 },
+      "description": "Highest easily accessible pine-ridge viewpoint overlooking the Hamirpur valleys and western Himalayan sunsets; popular student relaxation spot.",
+      "status": "verified_landmark",
+      "floors": 1,
+      "source": "NIT Hamirpur Student Landmarks"
+    },
+    {
+      "id": "loc-maingate",
+      "name": "Main Campus Gate & Security Portal",
+      "shortName": "Main Gate",
+      "category": "Spots",
+      "coords3d": [ -240, -2, 140 ],
+      "dimensions3d": [ 40, 14, 25 ],
+      "coords2d": { "x": 110, "y": 455, "w": 45, "h": 30 },
+      "description": "Principal ceremonial entrance to NIT Hamirpur off Hamirpur-Awah Devi road, equipped with 24/7 security checkpoint and visitor registry.",
+      "status": "verified_landmark",
+      "floors": 1,
+      "source": "NIT Hamirpur Security Administration"
+    },
+    {
+      "id": "loc-health",
+      "name": "Health Centre & Dispensary",
+      "shortName": "Health Centre",
+      "category": "Services",
+      "coords3d": [ -230, 2, -30 ],
+      "dimensions3d": [ 52, 14, 32 ],
+      "coords2d": { "x": 115, "y": 285, "w": 56, "h": 34 },
+      "description": "Campus medical dispensary providing outpatient consultation, emergency first aid, ambulance service, and essential pharmacy.",
+      "status": "verified_landmark",
+      "floors": 2,
+      "source": "NIT Hamirpur Medical Unit"
+    }
+  ],
+  "roads": [
+    {
+      "name": "Main Spine Road (Gate to Admin)",
+      "points2d": [
+        [ 110, 455 ], [ 160, 420 ], [ 210, 370 ], [ 230, 335 ]
+      ],
+      "points3d": [
+        [ -240, -2, 140 ], [ -190, 0, 100 ], [ -150, 2, 60 ], [ -120, 4, 30 ]
+      ]
+    },
+    {
+      "name": "Central Academic Avenue (Admin to Library & LHC)",
+      "points2d": [
+        [ 230, 335 ], [ 300, 300 ], [ 370, 270 ], [ 430, 235 ], [ 480, 205 ]
+      ],
+      "points3d": [
+        [ -120, 4, 30 ], [ -50, 6, 0 ], [ 0, 8, -20 ], [ 60, 11, -50 ], [ 120, 14, -80 ]
+      ]
+    },
+    {
+      "name": "Hostel & North Connector Road",
+      "points2d": [
+        [ 230, 335 ], [ 210, 250 ], [ 180, 180 ], [ 140, 140 ], [ 95, 115 ]
+      ],
+      "points3d": [
+        [ -120, 4, 30 ], [ -140, 5, -30 ], [ -180, 7, -100 ], [ -220, 9, -140 ], [ -250, 10, -180 ]
+      ]
+    },
+    {
+      "name": "Girls' Hostel Branch",
+      "points2d": [
+        [ 180, 180 ], [ 205, 120 ], [ 205, 80 ]
+      ],
+      "points3d": [
+        [ -180, 7, -100 ], [ -160, 10, -160 ], [ -150, 12, -220 ]
+      ]
+    },
+    {
+      "name": "Sports Ground Promenade",
+      "points2d": [
+        [ 480, 205 ], [ 560, 160 ], [ 650, 120 ]
+      ],
+      "points3d": [
+        [ 120, 14, -80 ], [ 180, 5, -130 ], [ 240, -4, -180 ]
+      ]
+    },
+    {
+      "name": "Sunset Point Trail",
+      "points2d": [
+        [ 370, 270 ], [ 450, 320 ], [ 580, 370 ], [ 725, 440 ]
+      ],
+      "points3d": [
+        [ 0, 8, -20 ], [ 80, 12, 30 ], [ 190, 18, 70 ], [ 300, 28, 120 ]
+      ]
+    }
+  ]
+}

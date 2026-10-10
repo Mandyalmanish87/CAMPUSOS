@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script src="/static/vendor/tailwind.min.js"></script>
 <script>
   tailwind.config = {
     theme: { extend: { fontFamily: {
@@ -183,10 +183,10 @@ svg.leaflet-zoom-animated{will-change:transform}
 </head>
 <body>
 <div id="root"></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<!-- Local vendor — no CDN required at runtime -->
+<script src="/static/vendor/react.production.min.js"></script>
+<script src="/static/vendor/react-dom.production.min.js"></script>
+<script src="/static/vendor/babel.min.js"></script>
 <script type="text/babel" data-presets="react">
 const { useState, useEffect, useMemo, useRef, useCallback, createContext, useContext } = React;
 const Ctx = createContext(null);
@@ -217,7 +217,7 @@ const dueLabel = iso => { const n = daysTo(iso); return n < 0 ? `${-n}d overdue`
 const mm = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
 /* ---------- attendance maths ---------- */
-const pct = a => (a.tot ? (a.att / a.tot) * 100 : 100);
+const pct = a => (a.tot ? (a.att / a.tot) * 100 : 0);
 function slack(a, thr) {
   if (pct(a) >= thr) return { ok: true, n: Math.max(0, Math.floor((a.att * 100) / thr - a.tot + 1e-9)) };
   return { ok: false, n: Math.ceil((thr * a.tot - 100 * a.att) / (100 - thr) - 1e-9) };
@@ -277,11 +277,11 @@ const seedEvents = () => [
   { id: 'e4', title: 'Robotics club induction', place: 'LHC 101', when: addDays(6), time: '17:00', going: false, count: 63 },
   { id: 'e5', title: 'Sunrise photo walk', place: 'Main gate', when: addDays(9), time: '06:00', going: false, count: 19 },
 ];
-const TT = [
-  { s: 540, e: 600, n: 'Analog Electronics', r: 'LHC 204' },
-  { s: 600, e: 660, n: 'Electromagnetic Theory', r: 'LHC 204' },
-  { s: 675, e: 735, n: 'Digital Signal Processing', r: 'LHC 112' },
-  { s: 840, e: 1020, n: 'Electronics Lab', r: 'ECE Lab 2' },
+const seedTimetable = () => [
+  { id: 'c1', s: 540, e: 600, n: 'Analog Electronics', r: 'LHC 204' },
+  { id: 'c2', s: 600, e: 660, n: 'Electromagnetic Theory', r: 'LHC 204' },
+  { id: 'c3', s: 675, e: 735, n: 'Digital Signal Processing', r: 'LHC 112' },
+  { id: 'c4', s: 840, e: 1020, n: 'Electronics Lab', r: 'ECE Lab 2' },
 ];
 const seedNotes = () => [
   { id: 'n1', title: 'Zener diode and voltage regulation', body:
@@ -412,20 +412,32 @@ const Avatar = ({ name, size = 52 }) => (
 const Empty = ({ children }) => <div className="text-center text-[13.5px] text-[color:var(--muted)] py-10 px-4 border border-dashed border-[color:var(--line)] rounded-2xl">{children}</div>;
 /* =====================  DASHBOARD  ===================== */
 function Dashboard({ S }) {
-  const { profile, att, setAtt, thr, tasks, setTasks, events, setEvents, go, toast } = S;
+  const { profile, att, setAtt, thr, tasks, setTasks, events, setEvents, timetable, setTimetable, go, toast } = S;
   const now = useNow();
   const hr = now.getHours();
   const greet = hr < 5 ? 'Still up' : hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
   const first = profile.name.split(' ')[0] || 'there';
   const pending = tasks.filter(t => !t.done);
   const soon = pending.filter(t => daysTo(t.due) <= 7).length;
-  const low = att.filter(a => pct(a) < thr);
+  const low = att.filter(a => a.tot > 0 && pct(a) < thr);
+  const hasAttendance = att.some(a => a.tot > 0);
   const wd = now.getDay();
   const weekend = wd === 0 || wd === 6;
   const mins = now.getHours() * 60 + now.getMinutes();
-  const cur = !weekend && TT.find(c => mins >= c.s && mins < c.e);
-  const nxt = !weekend && TT.find(c => c.s > mins);
+  const todayValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const sortedTimetable = [...timetable].sort((a, b) => a.s - b.s);
+  const cur = !weekend && sortedTimetable.find(c => mins >= c.s && mins < c.e);
+  const nxt = !weekend && sortedTimetable.find(c => c.s > mins);
   const [newTask, setNewTask] = useState('');
+  const [showClassForm, setShowClassForm] = useState(false);
+  const [editingClass, setEditingClass] = useState(null);
+  const [classForm, setClassForm] = useState({ name: '', room: '', start: '09:00', end: '10:00' });
+  const [showEventForm, setShowEventForm] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [eventForm, setEventForm] = useState({ title: '', place: '', date: '', time: '18:00' });
+  const [newSubject, setNewSubject] = useState('');
+  const [subjectAttended, setSubjectAttended] = useState('0');
+  const [subjectTotal, setSubjectTotal] = useState('0');
   const sortedTasks = [...tasks].sort((a, b) => (a.done - b.done) || (new Date(a.due) - new Date(b.due)));
   const addTask = e => {
     e.preventDefault();
@@ -434,6 +446,47 @@ function Dashboard({ S }) {
     setNewTask(''); toast('Task added, due in 3 days');
   };
   const mark = (id, d) => setAtt(att.map(a => a.id === id ? { ...a, att: a.att + (d === 'p' ? 1 : 0), tot: a.tot + 1 } : a));
+  const addSubject = e => {
+    e.preventDefault();
+    const name = newSubject.trim(), attended = Number(subjectAttended), total = Number(subjectTotal);
+    if (!name) return toast('Enter a subject name');
+    if (!Number.isInteger(attended) || !Number.isInteger(total) || attended < 0 || total < 0 || attended > total) return toast('Use valid class counts; attended cannot exceed held');
+    if (att.some(a => a.name.toLowerCase() === name.toLowerCase())) return toast('That subject is already on your list');
+    setAtt([...att, { id: uid(), name, att: attended, tot: total }]);
+    setNewSubject(''); setSubjectAttended('0'); setSubjectTotal('0'); toast(`${name} added`);
+  };
+  const openClassEditor = c => {
+    setEditingClass(c.id); setClassForm({ name: c.n, room: c.r, start: mm(c.s), end: mm(c.e) }); setShowClassForm(true);
+  };
+  const saveClass = e => {
+    e.preventDefault();
+    const start = Number(classForm.start.slice(0, 2)) * 60 + Number(classForm.start.slice(3, 5));
+    const end = Number(classForm.end.slice(0, 2)) * 60 + Number(classForm.end.slice(3, 5));
+    if (!classForm.name.trim() || !classForm.room.trim()) return toast('Enter a class name and room');
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return toast('End time must be after start time');
+    if (timetable.some(c => c.id !== editingClass && start < c.e && end > c.s)) return toast('This time overlaps another class');
+    const entry = { id: editingClass || uid(), n: classForm.name.trim(), r: classForm.room.trim(), s: start, e: end };
+    setTimetable(editingClass ? timetable.map(c => c.id === editingClass ? entry : c) : [...timetable, entry]);
+    setClassForm({ name: '', room: '', start: '09:00', end: '10:00' }); setEditingClass(null); setShowClassForm(false);
+    toast(editingClass ? 'Class updated' : 'Class added');
+  };
+  const openEventEditor = ev => {
+    const d = new Date(ev.when);
+    const date = Number.isNaN(d.getTime()) ? '' : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    setEditingEvent(ev.id); setEventForm({ title: ev.title, place: ev.place, date, time: ev.time || '18:00' }); setShowEventForm(true);
+  };
+  const saveEvent = e => {
+    e.preventDefault();
+    if (!eventForm.title.trim() || !eventForm.place.trim() || !eventForm.date || !eventForm.time) return toast('Add an event name, location, date and time');
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const whenDate = new Date(`${eventForm.date}T${eventForm.time}:00`);
+    if (Number.isNaN(whenDate.getTime()) || whenDate < today) return toast('Choose today or a future date');
+    const entry = { id: editingEvent || uid(), title: eventForm.title.trim(), place: eventForm.place.trim(), when: whenDate.toISOString(), time: eventForm.time, going: false, count: 0 };
+    setEvents(editingEvent ? events.map(ev => ev.id === editingEvent ? { ...ev, ...entry, going: ev.going, count: ev.count } : ev) : [...events, entry]);
+    setEventForm({ title: '', place: '', date: '', time: '18:00' }); setEditingEvent(null); setShowEventForm(false);
+    toast(editingEvent ? 'Event updated' : 'Event added');
+  };
+  const sortedEvents = [...events].sort((a, b) => new Date(a.when) - new Date(b.when));
 
   const quick = [
     { i: 'note', t: 'New note', f: () => go('studio', { newNote: true }) },
@@ -451,7 +504,7 @@ function Dashboard({ S }) {
         <p className="mt-4 text-[15px] text-[color:var(--muted)] max-w-[52ch] leading-relaxed relative">
           {soon === 0 ? 'Nothing is due this week.' : `${soon} ${soon === 1 ? 'task is' : 'tasks are'} due within a week`}
           {low.length > 0 && `${soon === 0 ? ' But' : ', and'} ${low.length} ${low.length === 1 ? 'subject sits' : 'subjects sit'} below ${thr}% attendance`}
-          {soon === 0 && low.length === 0 ? ' Attendance is above the line everywhere. A good day to get ahead.' : '.'}
+          {soon === 0 && low.length === 0 ? (hasAttendance ? ' Attendance is above the line everywhere. A good day to get ahead.' : ' Add your subjects and log classes to track attendance.') : '.'}
         </p>
         <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-2.5 relative">
           {quick.map(q => (
@@ -486,13 +539,22 @@ function Dashboard({ S }) {
       </Panel>
 
       <Panel className="lg:col-span-5">
-        <Head title={cur ? 'In class now' : 'Today’s classes'} sub={weekend ? 'It’s the weekend. Here is the weekday timetable for reference.' : undefined} demo />
+        <Head title={cur ? 'In class now' : 'Today’s classes'} sub={weekend ? 'It’s the weekend. Here is the weekday timetable for reference.' : undefined} demo right={<Btn sm onClick={() => { setShowClassForm(!showClassForm); setEditingClass(null); setClassForm({ name: '', room: '', start: '09:00', end: '10:00' }); }}>{showClassForm ? 'Close' : '+ Add class'}</Btn>} />
+        {showClassForm && (
+          <form onSubmit={saveClass} className="inset grid grid-cols-2 gap-2.5 p-3 mb-3">
+            <label className="lbl col-span-2">Subject<input className="field mt-1" required maxLength={80} placeholder="e.g. Physics" value={classForm.name} onChange={e => setClassForm({ ...classForm, name: e.target.value })} /></label>
+            <label className="lbl col-span-2">Room<input className="field mt-1" required maxLength={80} placeholder="e.g. LHC 204" value={classForm.room} onChange={e => setClassForm({ ...classForm, room: e.target.value })} /></label>
+            <label className="lbl">Starts<input className="field mt-1" required type="time" value={classForm.start} onChange={e => setClassForm({ ...classForm, start: e.target.value })} /></label>
+            <label className="lbl">Ends<input className="field mt-1" required type="time" value={classForm.end} onChange={e => setClassForm({ ...classForm, end: e.target.value })} /></label>
+            <div className="col-span-2 flex gap-2"><Btn v="primary" type="submit">{editingClass ? 'Save changes' : 'Add class'}</Btn>{editingClass && <Btn type="button" onClick={() => { setEditingClass(null); setShowClassForm(false); }}>Cancel</Btn>}</div>
+          </form>
+        )}
         <ol className="space-y-2">
-          {TT.map(c => {
+          {sortedTimetable.map(c => {
             const live = cur && cur.n === c.n;
             const past = !weekend && mins >= c.e;
             return (
-              <li key={c.n} className={`inset flex items-center gap-3.5 p-3 ${live ? 'inset-on' : ''} ${past ? 'opacity-45' : ''}`}>
+              <li key={c.id} className={`inset flex flex-wrap items-center gap-3.5 p-3 ${live ? 'inset-on' : ''} ${past ? 'opacity-45' : ''}`}>
                 <div className="tnum text-[13px] w-[86px] shrink-0 text-[color:var(--muted)]">{mm(c.s)} to {mm(c.e)}</div>
                 <div className="min-w-0 flex-1">
                   <div className="text-[14px] font-semibold truncate">{c.n}</div>
@@ -500,15 +562,30 @@ function Dashboard({ S }) {
                 </div>
                 {live && <span className="tag tag-acc">Now</span>}
                 {!live && nxt && nxt.n === c.n && <span className="tag">Next</span>}
+                <div className="flex gap-1.5 ml-auto"><Btn sm type="button" onClick={() => openClassEditor(c)}>Edit</Btn><Btn sm type="button" v="quiet" onClick={() => { setTimetable(timetable.filter(item => item.id !== c.id)); toast('Class removed'); }}>Remove</Btn></div>
               </li>
             );
           })}
         </ol>
+        {!sortedTimetable.length && <Empty>No classes added. Use “Add class” to build your timetable.</Empty>}
         {!weekend && !cur && !nxt && <p className="text-[13px] text-[color:var(--muted)] mt-3">Classes are done for today.</p>}
       </Panel>
 
       <Panel className="lg:col-span-7">
         <Head title="Attendance" sub={`Marked against a ${thr}% requirement. Log today’s classes to keep the numbers honest.`} demo />
+        <div className="inset flex flex-wrap items-center justify-between gap-3 p-3 mb-3">
+          <div>
+            <div className="text-[12px] text-[color:var(--muted)]">Overall attendance</div>
+            <div className="font-display text-[22px] tnum">{att.reduce((n, a) => n + a.att, 0)} / {att.reduce((n, a) => n + a.tot, 0)} classes · {att.reduce((n, a) => n + a.tot, 0) ? (att.reduce((n, a) => n + a.att, 0) / att.reduce((n, a) => n + a.tot, 0) * 100).toFixed(1) : '0.0'}%</div>
+          </div>
+          <span className="tag">{att.length} subjects</span>
+        </div>
+        <form onSubmit={addSubject} className="grid grid-cols-2 sm:grid-cols-[minmax(140px,1fr)_100px_100px_auto] gap-2 mb-3 items-end">
+          <input className="field col-span-2 sm:col-span-1" placeholder="Subject name" aria-label="Subject name" value={newSubject} onChange={e => setNewSubject(e.target.value)} />
+          <label className="text-[11px] text-[color:var(--muted)]">Attended<input className="field mt-1" type="number" min="0" step="1" aria-label="Classes attended" value={subjectAttended} onChange={e => setSubjectAttended(e.target.value)} /></label>
+          <label className="text-[11px] text-[color:var(--muted)]">Held<input className="field mt-1" type="number" min="0" step="1" aria-label="Classes held" value={subjectTotal} onChange={e => setSubjectTotal(e.target.value)} /></label>
+          <Btn v="primary" type="submit"><Icon n="plus" s={15} />Add subject</Btn>
+        </form>
         <ul className="space-y-3">
           {att.map(a => {
             const p = pct(a), sl = slack(a, thr);
@@ -528,11 +605,12 @@ function Dashboard({ S }) {
                 </div>
                 <div className="flex items-center justify-between gap-2 mt-2.5">
                   <p className="text-[12.5px] text-[color:var(--muted)]">
-                    {sl.ok ? (sl.n === 0 ? 'No room to miss a class.' : `You can miss ${sl.n} more ${sl.n === 1 ? 'class' : 'classes'}.`) : `Attend the next ${sl.n} in a row to reach ${thr}%.`}
+                    {a.tot === 0 ? 'No classes logged yet.' : sl.ok ? (sl.n === 0 ? 'No room to miss a class.' : `You can miss ${sl.n} more ${sl.n === 1 ? 'class' : 'classes'}.`) : `Attend the next ${sl.n} in a row to reach ${thr}%.`}
                   </p>
                   <div className="flex gap-1.5 shrink-0">
                     <Btn sm onClick={() => mark(a.id, 'p')} aria-label={`Log present for ${a.name}`}><Icon n="check" s={14} />Present</Btn>
                     <Btn sm onClick={() => mark(a.id, 'a')} aria-label={`Log absent for ${a.name}`}><Icon n="minus" s={14} />Absent</Btn>
+                    <button type="button" className="text-[color:var(--dim)] hover:text-[color:var(--bad)] px-1 cursor-pointer" title={`Remove ${a.name}`} aria-label={`Remove ${a.name}`} onClick={() => setAtt(att.filter(x => x.id !== a.id))}><Icon n="trash" s={14} /></button>
                   </div>
                 </div>
               </li>
@@ -570,9 +648,18 @@ function Dashboard({ S }) {
       </Panel>
 
       <Panel className="lg:col-span-6">
-        <Head title="Upcoming on campus" sub="Tap RSVP to mark yourself as going." demo />
+        <Head title="Upcoming on campus" sub="Add campus events and mark yourself as going." demo right={<Btn sm v="primary" onClick={() => { setShowEventForm(!showEventForm); setEditingEvent(null); setEventForm({ title: '', place: '', date: '', time: '18:00' }); }}>{showEventForm ? 'Close' : '+ Add event'}</Btn>} />
+        {showEventForm && (
+          <form onSubmit={saveEvent} className="inset grid grid-cols-2 gap-2.5 p-3 mb-3">
+            <label className="lbl col-span-2">Event name<input className="field mt-1" required maxLength={120} placeholder="e.g. Coding club meetup" value={eventForm.title} onChange={e => setEventForm({ ...eventForm, title: e.target.value })} /></label>
+            <label className="lbl col-span-2">Location<input className="field mt-1" required maxLength={120} placeholder="e.g. Seminar Hall" value={eventForm.place} onChange={e => setEventForm({ ...eventForm, place: e.target.value })} /></label>
+            <label className="lbl">Date<input className="field mt-1" required type="date" min={todayValue} value={eventForm.date} onChange={e => setEventForm({ ...eventForm, date: e.target.value })} /></label>
+            <label className="lbl">Time<input className="field mt-1" required type="time" value={eventForm.time} onChange={e => setEventForm({ ...eventForm, time: e.target.value })} /></label>
+            <div className="col-span-2 flex gap-2"><Btn v="primary" type="submit">{editingEvent ? 'Save changes' : 'Add event'}</Btn>{editingEvent && <Btn type="button" onClick={() => { setEditingEvent(null); setShowEventForm(false); }}>Cancel</Btn>}</div>
+          </form>
+        )}
         <ul className="space-y-2">
-          {events.map(ev => {
+          {sortedEvents.map(ev => {
             const d = new Date(ev.when);
             return (
               <li key={ev.id} className={`inset flex items-center gap-3.5 p-3 ${ev.going ? 'inset-on' : ''}`}>
@@ -587,36 +674,74 @@ function Dashboard({ S }) {
                 <Btn sm v={ev.going ? 'primary' : 'ghost'} onClick={() => { setEvents(events.map(x => x.id === ev.id ? { ...x, going: !x.going } : x)); toast(ev.going ? 'RSVP removed' : `You’re going to ${ev.title}`); }}>
                   {ev.going ? <><Icon n="check" s={14} sw={2.4} />Going</> : 'RSVP'}
                 </Btn>
+                <Btn sm type="button" onClick={() => openEventEditor(ev)}>Edit</Btn>
+                <Btn sm v="quiet" type="button" aria-label={`Remove ${ev.title}`} onClick={() => { setEvents(events.filter(x => x.id !== ev.id)); toast('Event removed'); }}>Remove</Btn>
               </li>
             );
           })}
         </ul>
+        {!sortedEvents.length && <Empty>No upcoming events. Add one to get started.</Empty>}
       </Panel>
     </div>
   );
 }
 
-/* =====================  CAMPUS EXPLORER  ===================== */
-const BUILDINGS = [
+/* =====================  CAMPUS EXPLORER — NATIVE 3D MAP  ===================== */
+/* Map is served as campus_map_3d.html from the same origin (FastAPI).
+   No external mapping service, CDN or tile server is required at runtime.
+   Three.js and OrbitControls are bundled locally in static/vendor/.
+   Campus data is in static/data/campus_data.json — verified NIT Hamirpur landmarks.
+
+   2D sketch (CampusMap) remains available as an instant offline fallback if
+   the browser does not support WebGL or the 3D page fails to load.
+*/
+
+
+/* ------- API client (small, reusable) ------- */
+const api = {
+  async get(path) {
+    const r = await fetch(path);
+    if (!r.ok) throw new Error(`API ${path} → ${r.status}`);
+    return r.json();
+  },
+  async post(path, body) {
+    const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    if (!r.ok) throw new Error(`API ${path} → ${r.status}`);
+    return r.json();
+  },
+  async patch(path) {
+    const r = await fetch(path, { method: 'PATCH' });
+    if (!r.ok) throw new Error(`API ${path} → ${r.status}`);
+    return r.json();
+  },
+  async del(path) {
+    const r = await fetch(path, { method: 'DELETE' });
+    if (!r.ok) throw new Error(`API ${path} → ${r.status}`);
+    return r.json();
+  },
+};
+
+/* ------- 2D sketch fallback (unchanged geometry) ------- */
+const BUILDINGS_2D = [
   { x: 225, y: 335, w: 70, h: 40, n: 'Admin block' },
   { x: 365, y: 275, w: 80, h: 50, n: 'Central library' },
   { x: 480, y: 205, w: 90, h: 55, n: 'Lecture hall complex' },
   { x: 575, y: 310, w: 70, h: 38, n: 'Computer centre' },
   { x: 205, y: 225, w: 64, h: 38, n: 'Food court' },
-  { x: 95, y: 115, w: 80, h: 45, n: 'Boys’ hostels' },
-  { x: 205, y: 80, w: 76, h: 42, n: 'Girls’ hostels' },
+  { x: 95, y: 115, w: 80, h: 45, n: 'Boys\u2019 hostels' },
+  { x: 205, y: 80, w: 76, h: 42, n: 'Girls\u2019 hostels' },
   { x: 420, y: 385, w: 80, h: 45, n: 'Auditorium' },
   { x: 115, y: 285, w: 56, h: 34, n: 'Health centre' },
 ];
 const CONTOURS = Array.from({ length: 11 }, (_, i) => { const y = -20 + i * 55, a = 18 + ((i * 7) % 16); return `M-10 ${y + 20} C 140 ${y - a}, 250 ${y + a + 30}, 400 ${y + 10} S 640 ${y - a - 10}, 810 ${y + 30}`; });
-const ROADS = [
+const ROADS_2D = [
   'M110 470 C 180 430, 220 400, 280 380 C 380 340, 450 320, 520 300 C 600 280, 680 220, 700 160',
   'M302 374 C 302 335, 292 295, 287 268 C 282 230, 250 190, 218 128',
   'M430 322 C 445 350, 455 380, 460 385',
   'M520 295 C 560 305, 590 312, 610 312',
 ];
 
-function CampusMap({ pins, selected, onSelect, drop, onDrop, draft, zoom }) {
+function CampusMap2D({ pins, selected, onSelect, drop, onDrop, draft, zoom }) {
   const ref = useRef(null);
   const W = 800, H = 520, vw = W / zoom, vh = H / zoom;
   const sel = pins.find(p => p.id === selected);
@@ -630,27 +755,22 @@ function CampusMap({ pins, selected, onSelect, drop, onDrop, draft, zoom }) {
     onDrop({ x: Math.round(p.x), y: Math.round(p.y) });
   };
   return (
-    <svg ref={ref} viewBox={`${vx} ${vy} ${vw} ${vh}`} className={`w-full h-auto rounded-[16px] block ${drop ? 'dropping' : ''}`} style={{ background: '#0E1210', border: '1px solid var(--line)' }} onClick={click} role="group" aria-label="Illustrative campus map with memory pins">
-      <defs>
-        <radialGradient id="hill" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#C8FF45" stopOpacity=".10" /><stop offset="1" stopColor="#C8FF45" stopOpacity="0" /></radialGradient>
-      </defs>
-      <ellipse cx="725" cy="440" rx="130" ry="85" fill="url(#hill)" />
+    <svg ref={ref} viewBox={`${vx} ${vy} ${vw} ${vh}`} className={`w-full h-auto rounded-[16px] block ${drop ? 'dropping' : ''}`} style={{ background: '#0E1210', border: '1px solid var(--line)' }} onClick={click} role="group" aria-label="Illustrative 2D campus sketch">
+      <defs><radialGradient id="hill2d" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#C8FF45" stopOpacity=".10" /><stop offset="1" stopColor="#C8FF45" stopOpacity="0" /></radialGradient></defs>
+      <ellipse cx="725" cy="440" rx="130" ry="85" fill="url(#hill2d)" />
       {CONTOURS.map((d, i) => <path key={i} d={d} fill="none" stroke="rgba(255,255,255,.055)" strokeWidth="1" />)}
-      {[70, 48, 26].map(r => <ellipse key={r} cx="725" cy="440" rx={r} ry={r * 0.58} fill="none" stroke="rgba(255,255,255,.09)" />)}
-      {ROADS.map((d, i) => (
+      {ROADS_2D.map((d, i) => (
         <g key={i} fill="none" strokeLinecap="round">
           <path d={d} stroke="rgba(255,255,255,.06)" strokeWidth="15" />
           <path d={d} stroke="#171B19" strokeWidth="12" />
-          <path d={d} className="s-acc" strokeOpacity=".28" strokeWidth="1" strokeDasharray="4 7" />
+          <path d={d} stroke="rgb(200,255,69)" strokeOpacity=".28" strokeWidth="1" strokeDasharray="4 7" />
         </g>
       ))}
       <ellipse cx="650" cy="120" rx="82" ry="50" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.14)" />
-      <ellipse cx="650" cy="120" rx="58" ry="32" fill="none" stroke="rgba(255,255,255,.1)" />
-      <line x1="650" y1="88" x2="650" y2="152" stroke="rgba(255,255,255,.1)" />
       <text x="650" y="186" textAnchor="middle" fontSize="10" fill="#7C857E">Sports ground</text>
       <text x="725" y="486" textAnchor="middle" fontSize="10" fill="#7C857E">Sunset point</text>
       <text x="110" y="494" textAnchor="middle" fontSize="10" fill="#7C857E">Main gate</text>
-      {BUILDINGS.map(b => (
+      {BUILDINGS_2D.map(b => (
         <g key={b.n}>
           <rect x={b.x} y={b.y} width={b.w} height={b.h} rx="7" fill="rgba(255,255,255,.045)" stroke="rgba(255,255,255,.15)" />
           <text x={b.x + b.w / 2} y={b.y + b.h + 14} textAnchor="middle" fontSize="10" fill="#7C857E">{b.n}</text>
@@ -658,22 +778,23 @@ function CampusMap({ pins, selected, onSelect, drop, onDrop, draft, zoom }) {
       ))}
       {draft && (
         <g transform={`translate(${draft.x} ${draft.y})`}>
-          <circle r="12" fill="none" className="s-acc" strokeDasharray="3 3" />
-          <circle r="4" className="f-acc" />
+          <circle r="12" fill="none" stroke="rgb(200,255,69)" strokeDasharray="3 3" />
+          <circle r="4" fill="rgb(200,255,69)" />
         </g>
       )}
       {pins.map(p => {
         const on = p.id === selected;
         return (
-          <g key={p.id} className="pin" transform={`translate(${p.x} ${p.y})`} role="button" tabIndex={0} aria-label={`${p.title}, ${p.cat} memory`} aria-pressed={on}
+          <g key={p.id} className="pin" transform={`translate(${p.x} ${p.y})`} role="button" tabIndex={0}
+            aria-label={`${p.title} memory`} aria-pressed={on}
             onClick={e => { e.stopPropagation(); if (!drop) onSelect(p.id); }}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(p.id); } }}>
-            {on && <circle r="12" className="f-acc pulse" fillOpacity=".35" />}
+            {on && <circle r="12" fill="rgba(200,255,69,.35)" className="pulse" />}
             <circle r="17" fill="transparent" className="ring" />
-            <circle r={on ? 8 : 6.5} className={`dot ${on ? 'f-acc' : ''}`} fill={on ? undefined : '#0B0D0C'} stroke="rgb(var(--acc-rgb))" strokeWidth="2" />
+            <circle r={on ? 8 : 6.5} fill={on ? 'rgb(200,255,69)' : '#0B0D0C'} stroke="rgb(200,255,69)" strokeWidth="2" />
             {on && (
               <g transform="translate(0 -22)">
-                <rect x={-(p.title.length * 3.1 + 10)} y="-12" width={p.title.length * 6.2 + 20} height="22" rx="11" fill="#0B0D0C" stroke="rgba(var(--acc-rgb),.6)" />
+                <rect x={-(p.title.length * 3.1 + 10)} y="-12" width={p.title.length * 6.2 + 20} height="22" rx="11" fill="#0B0D0C" stroke="rgba(200,255,69,.6)" />
                 <text y="3" textAnchor="middle" fontSize="11" fill="#ECEFEA" fontWeight="600">{p.title}</text>
               </g>
             )}
@@ -684,280 +805,267 @@ function CampusMap({ pins, selected, onSelect, drop, onDrop, draft, zoom }) {
   );
 }
 
-/* =====================  CAMPUS EXPLORER (real map + sketch fallback)  ===================== */
-/* Only coordinate used as "known": India Post record for "NIT Hamirpur SO" (31.7083, 76.5273).
-   It marks the campus area. No building coordinates are included because none were verified. */
-const CAMPUS = { lat: 31.7083, lng: 76.5273 };
-const OSM_FULL = `https://www.openstreetmap.org/?mlat=${CAMPUS.lat}&mlon=${CAMPUS.lng}#map=16/${CAMPUS.lat}/${CAMPUS.lng}`;
-const GMAPS_FULL = `https://www.google.com/maps/search/?api=1&query=${CAMPUS.lat},${CAMPUS.lng}`;
-const osmPin = (lat, lng) => `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=19/${lat}/${lng}`;
-
-const mkIcon = (kind, on) => window.L.divIcon({ className: '', html: `<div class="mk mk-${kind} ${on ? 'mk-on' : ''}"><i></i></div>`, iconSize: [28, 28], iconAnchor: [14, 14] });
-
-function RealMap({ pins, selected, onSelect, picking, onPick, draft, onStatus, recenter }) {
-  const el = useRef(null);
-  const st = useRef({});
-  const cb = useRef({});
-  cb.current = { onSelect, onPick, picking, onStatus };
+/* ------- Native 3D map iframe component ------- */
+function NativeMap3D({ onSelect, onStatus, filterCategory }) {
+  const iframeRef = useRef(null);
 
   useEffect(() => {
-    const L = window.L;
-    if (!L || !el.current) { cb.current.onStatus('nolib'); return; }
-    let m;
-    try { m = L.map(el.current, { center: [CAMPUS.lat, CAMPUS.lng], zoom: 16, minZoom: 5, maxZoom: 19 }); }
-    catch (e) { cb.current.onStatus('nolib'); return; }
-    // Try OpenStreetMap first, then fall back to CARTO if OSM tiles are blocked.
-    // Keep attribution visible for whichever tile source is active.
-    let loaded = 0, errors = 0, fallbackTried = false;
-    let tiles = null;
-    const osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
-    const fallbackAttribution = 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ';
-    const markLoaded = () => { loaded++; cb.current.onStatus('ok'); };
-    const startFallback = () => {
-      if (fallbackTried || loaded > 0) return;
-      fallbackTried = true;
-      errors = 0;
-      if (tiles) { tiles.off(); m.removeLayer(tiles); }
-      tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 19, attribution: fallbackAttribution,
-      }).addTo(m);
-      tiles.on('tileload', markLoaded);
-      tiles.on('tileerror', () => { errors++; if (!loaded && errors >= 5) cb.current.onStatus('failed'); });
+    const handler = e => {
+      if (!e.data || e.data.type !== 'campusMap3D') return;
+      if (e.data.status === 'ready') onStatus('ok');
+      else if (e.data.status === 'no-webgl') onStatus('no-webgl');
+      else if (e.data.status === 'selected') onSelect && onSelect(e.data.locationData);
+      else if (e.data.status === 'deselected') onSelect && onSelect(null);
     };
-    tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19, attribution: osmAttribution,
-    }).addTo(m);
-    tiles.on('tileload', markLoaded);
-    tiles.on('tileerror', () => { errors++; if (!loaded && errors >= 3) startFallback(); });
-    const timer = setTimeout(() => { if (!loaded) { if (!fallbackTried) { startFallback(); setTimeout(() => { if (!loaded) cb.current.onStatus('failed'); }, 7000); } else cb.current.onStatus('failed'); } }, 9000);
-    m.on('click', e => { if (cb.current.picking) cb.current.onPick({ lat: +e.latlng.lat.toFixed(6), lng: +e.latlng.lng.toFixed(6) }); });
-    const ref = L.marker([CAMPUS.lat, CAMPUS.lng], { icon: mkIcon('ref', false), title: 'NIT Hamirpur campus reference point', keyboard: true })
-      .addTo(m).on('click', () => cb.current.onSelect('ref'));
-    st.current = { m, ref, markers: {}, draft: null };
-    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => m.invalidateSize()) : null;
-    if (ro) ro.observe(el.current);
-    return () => { clearTimeout(timer); if (ro) ro.disconnect(); m.remove(); st.current = {}; };
-  }, []);
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, [onSelect, onStatus]);
 
   useEffect(() => {
-    const s = st.current; if (!s.m) return;
-    const L = window.L, seen = new Set();
-    pins.filter(p => p.lat != null).forEach(p => {
-      seen.add(p.id);
-      const icon = mkIcon('pin', p.id === selected);
-      if (!s.markers[p.id]) s.markers[p.id] = L.marker([p.lat, p.lng], { icon, title: p.title, keyboard: true }).addTo(s.m).on('click', () => cb.current.onSelect(p.id));
-      else { s.markers[p.id].setLatLng([p.lat, p.lng]); s.markers[p.id].setIcon(icon); }
-    });
-    Object.keys(s.markers).forEach(id => { if (!seen.has(id)) { s.markers[id].remove(); delete s.markers[id]; } });
-    s.ref.setIcon(mkIcon('ref', selected === 'ref'));
-  }, [pins, selected]);
+    if (iframeRef.current && filterCategory) {
+      iframeRef.current.contentWindow && iframeRef.current.contentWindow.postMessage(
+        { type: 'campusMap3DCmd', action: 'filterCategory', category: filterCategory }, '*'
+      );
+    }
+  }, [filterCategory]);
 
-  useEffect(() => {
-    const s = st.current; if (!s.m) return;
-    const L = window.L;
-    if (s.draft) { s.draft.remove(); s.draft = null; }
-    if (draft && draft.lat != null) s.draft = L.marker([draft.lat, draft.lng], { icon: mkIcon('draft', false), interactive: false }).addTo(s.m);
-  }, [draft]);
+  const sendCmd = cmd => iframeRef.current && iframeRef.current.contentWindow &&
+    iframeRef.current.contentWindow.postMessage({ type: 'campusMap3DCmd', ...cmd }, '*');
 
-  useEffect(() => {
-    const s = st.current; if (!s.m) return;
-    s.m.getContainer().classList.toggle('leaflet-crosshair', !!picking);
-  }, [picking]);
-
-  useEffect(() => {
-    const s = st.current; if (!s.m) return;
-    if (selected === 'ref') s.m.panTo([CAMPUS.lat, CAMPUS.lng]);
-    else if (s.markers[selected]) s.m.panTo(s.markers[selected].getLatLng());
-  }, [selected]);
-
-  useEffect(() => {
-    const s = st.current; if (!s.m || !recenter) return;
-    s.m.setView([CAMPUS.lat, CAMPUS.lng], 16);
-  }, [recenter]);
-
-  return <div ref={el} className="map-wrap map-dark w-full rounded-[16px]" style={{ border: '1px solid var(--line)' }} role="application" aria-label="Interactive map of the NIT Hamirpur area. Use the zoom buttons or drag to move." />;
+  return (
+    <div style={{ position: 'relative', height: 520, borderRadius: 16, overflow: 'hidden', border: '1px solid var(--line)' }}>
+      <iframe
+        ref={iframeRef}
+        src="/static/campus_map_3d.html"
+        title="NIT Hamirpur 3D Campus Map"
+        style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+        allowFullScreen
+        loading="eager"
+      />
+    </div>
+  );
 }
 
-const Legend = ({ real }) => (
-  <ul className="flex flex-wrap gap-x-5 gap-y-2 text-[12.5px] text-[color:var(--muted)]" aria-label="Map legend">
-    {real ? (<>
-      <li className="inline-flex items-center gap-2.5"><span className="lg lg-ref" />Campus reference point (India Post record)</li>
-      <li className="inline-flex items-center gap-2.5"><span className="lg lg-pin" />Memory pin placed by you</li>
-      <li className="inline-flex items-center gap-2.5"><span className="lg lg-draft" />Pin being placed</li>
-    </>) : (<>
-      <li className="inline-flex items-center gap-2.5"><span className="lg lg-pin" />Memory pin (invented sketch position)</li>
-      <li className="inline-flex items-center gap-2.5"><span className="lg lg-draft" />Pin being placed</li>
-    </>)}
-  </ul>
-);
-
-const ExtLink = ({ href, children }) => <a className="btn btn-ghost btn-sm" href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
-
 function Explorer({ S }) {
-  const { pins, setPins, profile, toast } = S;
-  const [view, setView] = useState('real');
-  const [status, setStatus] = useState('loading');
-  const [mapKey, setMapKey] = useState(0);
-  const [recenter, setRecenter] = useState(0);
+  const { profile, toast } = S;
+  const [view, setView] = useState('3d');   // '3d' | 'sketch'
+  const [mapStatus, setMapStatus] = useState('loading');
   const [cat, setCat] = useState('All');
-  const [sel, setSel] = useState('ref');
+  const [sel3d, setSel3d] = useState(null);    // selected 3D location object
+  const [selMemory, setSelMemory] = useState(null);
   const [zoom, setZoom] = useState(1);
-  const [picking, setPicking] = useState(null); // null | 'drop' | { place: pinId }
+  const [dropping, setDropping] = useState(false);
   const [draft, setDraft] = useState(null);
   const [form, setForm] = useState({ title: '', memory: '', cat: 'Spots' });
-  const real = view === 'real';
-  const dropping = picking === 'drop';
-  const placing = picking && picking.place ? pins.find(p => p.id === picking.place) : null;
-  const visible = pins.filter(p => (cat === 'All' || p.cat === cat) && (real || p.x != null));
-  const cur = visible.find(p => p.id === sel);
-  const showRef = real && sel === 'ref';
-  const mapProblem = real && (status === 'failed' || status === 'nolib');
+  const [submitting, setSubmitting] = useState(false);
 
-  const switchView = v => {
-    setView(v); setPicking(null); setDraft(null);
-    if (v === 'real') { setStatus('loading'); setSel('ref'); }
-    else { const f = pins.find(p => p.x != null); setSel(f ? f.id : null); }
-  };
-  const onPick = ll => {
-    if (picking === 'drop') setDraft(ll);
-    else if (picking && picking.place) {
-      setPins(pins.map(p => (p.id === picking.place ? { ...p, lat: ll.lat, lng: ll.lng } : p)));
-      setSel(picking.place); setPicking(null);
-      toast('Pin placed where you clicked. That position comes from you and isn’t verified');
+  // API-backed memories
+  const [memories, setMemories] = useState([]);
+  const [loadingMem, setLoadingMem] = useState(true);
+  const [memError, setMemError] = useState(null);
+
+  useEffect(() => {
+    api.get('/api/memories')
+      .then(data => { setMemories(data); setLoadingMem(false); })
+      .catch(err => { setMemError('Could not load memories from server.'); setLoadingMem(false); });
+  }, []);
+
+  const visible = memories.filter(m => cat === 'All' || m.category === cat);
+
+  const save = async e => {
+    e.preventDefault();
+    if (!form.title.trim() || !form.memory.trim()) return toast('Add a title and a memory');
+    if (view === 'sketch' && !draft) return toast('Click the sketch to place the pin first');
+    setSubmitting(true);
+    try {
+      const payload = {
+        title: form.title.trim(),
+        description: form.memory.trim(),
+        category: form.cat,
+        by_author: `${profile.name} (you)`,
+        ...(view === 'sketch' ? { x: draft?.x, y: draft?.y } : {}),
+      };
+      const created = await api.post('/api/memories', payload);
+      setMemories([created, ...memories]);
+      setSelMemory(created);
+      setDraft(null); setDropping(false);
+      setForm({ title: '', memory: '', cat: 'Spots' });
+      toast('Memory saved — it persists in the database!');
+    } catch (err) {
+      toast('Failed to save memory. Is the server running?');
+    } finally {
+      setSubmitting(false);
     }
   };
-  const save = e => {
-    e.preventDefault();
-    const ok = real ? draft && draft.lat != null : draft && draft.x != null;
-    if (!ok) return toast('Click the map to place the pin first');
-    if (!form.title.trim() || !form.memory.trim()) return toast('Add a title and a memory');
-    const id = 'u' + uid();
-    const base = { id, cat: form.cat, title: form.title.trim(), memory: form.memory.trim(), by: `${profile.name} (you)`, likes: 0, liked: false, mine: true };
-    setPins([...pins, real ? { ...base, lat: draft.lat, lng: draft.lng } : { ...base, x: draft.x, y: draft.y }]);
-    setSel(id); setCat('All'); setDraft(null); setPicking(null); setForm({ title: '', memory: '', cat: 'Spots' });
-    toast('Memory pinned. It’s stored in this browser only');
-  };
-  const startPlace = p => { if (!real) { setView('real'); setStatus('loading'); } setDraft(null); setPicking({ place: p.id }); setSel(p.id); };
 
-  const statusTag = !real ? <span className="tag">Illustrative sketch</span>
-    : status === 'ok' ? <span className="tag tag-acc">OpenStreetMap tiles loaded</span>
-    : status === 'loading' ? <span className="tag">Loading map tiles</span>
-    : <span className="tag tag-warn">Map tiles unavailable</span>;
+  const deleteMemory = async (id) => {
+    try {
+      await api.del(`/api/memories/${id}`);
+      setMemories(memories.filter(m => m.id !== id));
+      if (selMemory?.id === id) setSelMemory(null);
+      toast('Memory removed');
+    } catch {
+      toast('Failed to remove memory');
+    }
+  };
+
+  const likeMemory = async (id) => {
+    try {
+      const updated = await api.patch(`/api/memories/${id}/like`);
+      setMemories(memories.map(m => m.id === id ? updated : m));
+      if (selMemory?.id === id) setSelMemory(updated);
+    } catch { /* ignore */ }
+  };
+
+  const on3DSelect = locData => {
+    setSel3d(locData);
+    setSelMemory(null);
+  };
+
+  const GMAPS_FULL = `https://www.google.com/maps/search/?api=1&query=31.7083,76.5273`;
+
+  const statusTag = view === 'sketch'
+    ? <span className="tag">2D Sketch fallback</span>
+    : mapStatus === 'ok' ? <span className="tag tag-acc">3D map ready — offline capable</span>
+    : mapStatus === 'no-webgl' ? <span className="tag tag-warn">WebGL unavailable — using sketch</span>
+    : <span className="tag">Loading 3D map…</span>;
+
+  const CAT_COLORS_UI = {
+    Academic: '#7DF3E1', Administrative: '#FFC24D', Hostels: '#FF9F7A',
+    Dining: '#FF7A6B', Sports: '#A0E060', Spots: '#E5A4FF', Services: '#98A099'
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_350px] gap-4 lg:gap-5">
       <Panel>
-        <Head title="Memories on the map"
-          sub={real ? 'A real OpenStreetMap view centred on NIT Hamirpur. Only the campus reference point is pre-marked; you place your own memory pins.' : 'The old hand-drawn sketch, kept as an offline fallback. Its layout and pin positions are invented for the demo.'}
+        <Head title="Campus Explorer"
+          sub={view === '3d'
+            ? 'Native NIT Hamirpur 3D campus map — no external map service. Orbit, zoom, and click buildings. All assets load locally.'
+            : 'Illustrative 2D sketch fallback. Click to drop memory pins.'}
           right={statusTag} />
+
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <div className="flex gap-2" role="group" aria-label="Map type">
-            <Chip on={real} onClick={() => switchView('real')}>Real map</Chip>
-            <Chip on={!real} onClick={() => switchView('sketch')}>Sketch</Chip>
+            <Chip on={view === '3d'} onClick={() => { setView('3d'); setDropping(false); setDraft(null); }}>3D Map</Chip>
+            <Chip on={view === 'sketch'} onClick={() => { setView('sketch'); setDropping(false); setDraft(null); }}>2D Sketch</Chip>
           </div>
           <div className="hscroll flex gap-2 flex-1 min-w-0 pb-1">
-            {['All', ...PIN_CATS].map(c => <Chip key={c} on={cat === c} onClick={() => setCat(c)}>{c}</Chip>)}
+            {['All', 'Academic', 'Food', 'Hostels', 'Sports', 'Spots', 'Services'].map(c => (
+              <Chip key={c} on={cat === c} onClick={() => setCat(c)}>{c}</Chip>
+            ))}
           </div>
         </div>
+
         <div className="flex flex-wrap items-center gap-2 mb-3">
-          {real ? <Btn sm onClick={() => { setRecenter(r => r + 1); setSel('ref'); }}><Icon n="pin" s={14} />Recenter on campus</Btn> : (<>
-            <Btn sm onClick={() => setZoom(z => Math.max(1, +(z - 0.5).toFixed(1)))} aria-label="Zoom out" disabled={zoom <= 1}><Icon n="minus" s={14} /></Btn>
-            <Btn sm onClick={() => setZoom(z => Math.min(2.5, +(z + 0.5).toFixed(1)))} aria-label="Zoom in" disabled={zoom >= 2.5}><Icon n="plus" s={14} /></Btn>
-          </>)}
-          <Btn sm v={dropping ? 'primary' : 'ghost'} onClick={() => { setPicking(dropping ? null : 'drop'); setDraft(null); }}><Icon n="pin" s={14} />{dropping ? 'Cancel' : 'Drop a memory'}</Btn>
+          {view === 'sketch' && <>
+            <Btn sm onClick={() => setZoom(z => Math.max(1, +(z - 0.5).toFixed(1)))} disabled={zoom <= 1}><Icon n="minus" s={14} /></Btn>
+            <Btn sm onClick={() => setZoom(z => Math.min(2.5, +(z + 0.5).toFixed(1)))} disabled={zoom >= 2.5}><Icon n="plus" s={14} /></Btn>
+          </>}
+          <Btn sm v={dropping ? 'primary' : 'ghost'} onClick={() => { setDropping(!dropping); setDraft(null); }}>
+            <Icon n="pin" s={14} />{dropping ? 'Cancel' : 'Add memory'}
+          </Btn>
           <span className="flex-1" />
-          <ExtLink href={OSM_FULL}>Open in OpenStreetMap</ExtLink>
-          <ExtLink href={GMAPS_FULL}>Open in Google Maps</ExtLink>
+          <a className="btn btn-ghost btn-sm" href={GMAPS_FULL} target="_blank" rel="noopener noreferrer">Google Maps</a>
         </div>
 
-        {mapProblem && (
-          <div className="inset p-4 mb-3 view" style={{ borderColor: 'rgba(255,180,84,.4)' }} role="alert">
-            <div className="text-[14px] font-semibold text-[color:var(--warn)]">{status === 'nolib' ? 'The map library didn’t load' : 'Map tiles couldn’t load'}</div>
-            <p className="text-[13px] text-[color:var(--muted)] mt-1.5 leading-relaxed">
-              {status === 'nolib' ? 'The mapping script was blocked or you’re offline.' : 'The page can’t reach OpenStreetMap’s tile server. You may be offline, or this host may block outside images.'} The full map links above still work, and the sketch is available as a fallback.
-            </p>
-            <div className="flex flex-wrap gap-2 mt-3">
-              <Btn sm onClick={() => { setStatus('loading'); setMapKey(k => k + 1); }}>Try again</Btn>
-              <Btn sm v="primary" onClick={() => switchView('sketch')}>Use the sketch</Btn>
-            </div>
-          </div>
-        )}
-        {dropping && <p className="text-[13px] mb-3 text-[color:var(--acc)]">Click the map where the memory happened, then fill in the form.</p>}
-        {placing && <p className="text-[13px] mb-3 text-[color:var(--acc)]">Click the map to place “{placing.title}”. <button className="underline cursor-pointer" onClick={() => setPicking(null)}>Cancel</button></p>}
+        {dropping && <p className="text-[13px] mb-3 text-[color:var(--acc)]">
+          {view === 'sketch' ? 'Click the sketch to place your memory, then fill in the form.' : 'Fill in the form and save — position comes from the campus data.'}
+        </p>}
 
-        {real
-          ? <RealMap key={mapKey} pins={visible} selected={sel} onSelect={id => { if (!picking) setSel(id); }} picking={picking} onPick={onPick} draft={draft} onStatus={setStatus} recenter={recenter} />
-          : <CampusMap pins={visible} selected={cur ? cur.id : null} onSelect={setSel} drop={dropping} draft={draft} zoom={zoom} onDrop={p => setDraft(p)} />}
+        {view === '3d'
+          ? <NativeMap3D onSelect={on3DSelect} onStatus={s => { setMapStatus(s); if (s === 'no-webgl') setView('sketch'); }} filterCategory={cat} />
+          : <CampusMap2D pins={visible.filter(m => m.x != null).map(m => ({ id: m.id, title: m.title, x: m.x, y: m.y, cat: m.category }))}
+              selected={selMemory?.id || null} onSelect={id => setSelMemory(memories.find(m => m.id === id) || null)}
+              drop={dropping} draft={draft} zoom={zoom}
+              onDrop={p => setDraft(p)} />
+        }
 
-        <div className="mt-4"><Legend real={real} /></div>
         <p className="text-[12px] text-[color:var(--dim)] mt-3 leading-relaxed">
-          {real ? 'No individual buildings are labelled because their positions haven’t been verified. The reference point comes from India Post’s record for the NIT Hamirpur post office and marks the campus area, not a particular building.' : 'Layout, building names and distances in this sketch are made up for the demo and don’t match the real campus.'}
+          {view === '3d'
+            ? 'Building placements are based on verified NIT Hamirpur campus landmarks. 3D geometry is simplified and illustrative — not surveyed architecture. Campus data file: static/data/campus_data.json.'
+            : 'The 2D sketch layout is illustrative and does not match true building positions.'}
         </p>
       </Panel>
 
       <div className="space-y-4 lg:space-y-5 min-w-0">
         {dropping ? (
           <Panel glow>
-            <Head title="New memory pin" sub={draft ? 'Position set. Describe the memory.' : 'Waiting for you to click the map.'} />
+            <Head title="New memory" sub={view === 'sketch' ? (draft ? 'Position set — describe the memory.' : 'Click the sketch first.') : 'Describe your campus memory.'} />
             <form onSubmit={save} className="space-y-3">
-              <div><label className="lbl" htmlFor="pt">Title</label><input id="pt" className="field" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Where was it?" maxLength={44} /></div>
-              <div><label className="lbl" htmlFor="pc">Category</label><select id="pc" className="field" value={form.cat} onChange={e => setForm({ ...form, cat: e.target.value })}>{PIN_CATS.map(c => <option key={c}>{c}</option>)}</select></div>
-              <div><label className="lbl" htmlFor="pm">Memory</label><textarea id="pm" rows={4} className="field" value={form.memory} onChange={e => setForm({ ...form, memory: e.target.value })} placeholder="What happened here?" maxLength={240} /></div>
-              <Btn v="primary" type="submit" className="w-full">Save pin</Btn>
+              <div><label className="lbl" htmlFor="pt">Title</label><input id="pt" className="field" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Where was it?" maxLength={80} /></div>
+              <div><label className="lbl" htmlFor="pc">Category</label>
+                <select id="pc" className="field" value={form.cat} onChange={e => setForm({ ...form, cat: e.target.value })}>
+                  {['Academic', 'Dining', 'Hostels', 'Sports', 'Spots', 'Services'].map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+              <div><label className="lbl" htmlFor="pm">Memory</label><textarea id="pm" rows={4} className="field" value={form.memory} onChange={e => setForm({ ...form, memory: e.target.value })} placeholder="What happened here?" maxLength={1000} /></div>
+              <Btn v="primary" type="submit" className="w-full" disabled={submitting}>{submitting ? 'Saving…' : 'Save to database'}</Btn>
             </form>
           </Panel>
-        ) : showRef ? (
-          <Panel glow key="ref" className="view">
-            <div className="flex items-center gap-2 mb-3"><span className="tag tag-acc">Reference point</span></div>
-            <h3 className="font-display text-[26px] leading-tight tracking-tight">NIT Hamirpur campus area</h3>
-            <p className="mt-3 text-[14px] leading-[1.7] text-[#D5DAD3]">Position taken from India Post’s record for the NIT Hamirpur post office: <span className="tnum">{CAMPUS.lat}, {CAMPUS.lng}</span>. It marks the campus area only. It is not a specific building, gate or department.</p>
-            <p className="mt-3 text-[12.5px] text-[color:var(--muted)] leading-relaxed">Zoom in on the map and drop your own pins for the places you know. Check them against the real campus before relying on them.</p>
-            <div className="flex flex-wrap gap-2 mt-4"><ExtLink href={OSM_FULL}>OpenStreetMap</ExtLink><ExtLink href={GMAPS_FULL}>Google Maps</ExtLink></div>
-          </Panel>
-        ) : cur ? (
-          <Panel glow key={cur.id} className="view">
-            <div className="flex items-center gap-2 mb-3"><span className="tag tag-acc">{cur.cat}</span>{cur.mine ? <span className="tag">Yours</span> : <DemoTag />}</div>
-            <h3 className="font-display text-[26px] leading-tight tracking-tight">{cur.title}</h3>
-            <p className="mt-3 text-[14.5px] leading-[1.7] text-[#D5DAD3]">{cur.memory}</p>
-            <p className="mt-3 text-[12.5px] text-[color:var(--muted)]">Pinned by {cur.by}</p>
-            <p className="mt-1.5 text-[12.5px] text-[color:var(--muted)] leading-relaxed">
-              {cur.lat != null ? <>Placed by you at <span className="tnum">{cur.lat.toFixed(5)}, {cur.lng.toFixed(5)}</span>. Not independently verified.</> : cur.x != null ? 'Sketch position only, so it isn’t on the real map yet.' : ''}
+        ) : sel3d && view === '3d' ? (
+          <Panel glow key={sel3d.id} className="view">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="tag tag-acc" style={{ color: CAT_COLORS_UI[sel3d.category], borderColor: CAT_COLORS_UI[sel3d.category] }}>{sel3d.category}</span>
+              <span className="tag">Verified landmark</span>
+            </div>
+            <h3 className="font-display text-[22px] leading-tight tracking-tight">{sel3d.name}</h3>
+            <p className="mt-3 text-[14px] leading-[1.7] text-[#D5DAD3]">{sel3d.description}</p>
+            <p className="mt-3 text-[12px] text-[color:var(--dim)] leading-relaxed">
+              Source: {sel3d.source || 'NIT Hamirpur campus directory'}<br />
+              Geometry: illustrative 3D — not surveyed architecture
             </p>
+          </Panel>
+        ) : selMemory ? (
+          <Panel glow key={selMemory.id} className="view">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="tag tag-acc">{selMemory.category}</span>
+              {selMemory.by_author?.includes('(you)') && <span className="tag">Yours</span>}
+            </div>
+            <h3 className="font-display text-[22px] leading-tight tracking-tight">{selMemory.title}</h3>
+            <p className="mt-3 text-[14px] leading-[1.7] text-[#D5DAD3]">{selMemory.description}</p>
+            <p className="mt-3 text-[12.5px] text-[color:var(--muted)]">Pinned by {selMemory.by_author}</p>
             <div className="flex flex-wrap items-center gap-2 mt-4">
-              <Btn v={cur.liked ? 'primary' : 'ghost'} sm onClick={() => setPins(pins.map(p => p.id === cur.id ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) } : p))}>
-                <Icon n="heart" s={14} />{cur.liked ? 'I remember this too' : 'I remember this'} <span className="tnum">{cur.likes}</span>
-              </Btn>
-              <Btn sm onClick={() => startPlace(cur)}><Icon n="pin" s={14} />{cur.lat != null ? 'Move on real map' : 'Place on real map'}</Btn>
-              {cur.lat != null && <ExtLink href={osmPin(cur.lat, cur.lng)}>Open in OSM</ExtLink>}
-              {cur.mine && <Btn sm v="quiet" onClick={() => { setPins(pins.filter(p => p.id !== cur.id)); setSel(real ? 'ref' : null); toast('Pin removed'); }}><Icon n="trash" s={14} />Remove</Btn>}
+              <Btn sm onClick={() => likeMemory(selMemory.id)}><Icon n="heart" s={14} /> Remember this <span className="tnum">{selMemory.likes}</span></Btn>
+              {selMemory.by_author?.includes('(you)') &&
+                <Btn sm v="quiet" onClick={() => deleteMemory(selMemory.id)}><Icon n="trash" s={14} /> Remove</Btn>}
             </div>
           </Panel>
         ) : (
-          <Panel><Empty>No pin selected. Choose one on the map or from the list.</Empty></Panel>
+          <Panel><Empty>Select a building on the 3D map or a memory from the list below.</Empty></Panel>
         )}
+
         <Panel>
-          <Head title="All pins" sub={`${visible.length} shown`} />
-          <ul className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
-            {real && (
-              <li><button onClick={() => { setSel('ref'); setPicking(null); }} className={`inset w-full text-left px-3 py-2.5 flex items-center gap-3 cursor-pointer ${showRef ? 'inset-on' : ''}`}>
-                <span className="lg lg-ref ml-1 mr-1" /><span className="min-w-0 flex-1"><span className="block text-[13.5px] font-semibold truncate">Campus reference point</span><span className="block text-[12px] text-[color:var(--muted)]">India Post record</span></span>
-              </button></li>
-            )}
-            {visible.map(p => (
-              <li key={p.id}>
-                <button onClick={() => { setSel(p.id); setPicking(null); }} className={`inset w-full text-left px-3 py-2.5 flex items-center gap-3 cursor-pointer ${p.id === (cur && cur.id) && !showRef ? 'inset-on' : ''}`}>
-                  <span className="text-[color:var(--acc)]"><Icon n="pin" s={16} /></span>
-                  <span className="min-w-0 flex-1"><span className="block text-[13.5px] font-semibold truncate">{p.title}</span><span className="block text-[12px] text-[color:var(--muted)]">{p.cat}, {p.lat != null ? 'on real map' : 'sketch only'}</span></span>
-                  <span className="text-[12px] text-[color:var(--muted)] tnum">{p.likes}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <Head title="Campus memories" sub={loadingMem ? 'Loading…' : `${visible.length} shown`} />
+          {memError && <p className="text-[13px] text-[color:var(--bad)] mb-2">{memError}</p>}
+          {loadingMem ? (
+            <div className="text-[13px] text-[color:var(--muted)] py-4">Loading from database…</div>
+          ) : (
+            <ul className="space-y-1.5 max-h-[340px] overflow-y-auto pr-1">
+              {visible.length === 0 && <li><Empty>No memories for this category yet.</Empty></li>}
+              {visible.map(m => (
+                <li key={m.id}>
+                  <button onClick={() => { setSelMemory(m); setSel3d(null); }}
+                    className={`inset w-full text-left px-3 py-2.5 flex items-center gap-3 cursor-pointer ${selMemory?.id === m.id ? 'inset-on' : ''}`}>
+                    <span className="text-[color:var(--acc)]"><Icon n="pin" s={16} /></span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[13.5px] font-semibold truncate">{m.title}</span>
+                      <span className="block text-[12px] text-[color:var(--muted)]">{m.category} · {m.by_author}</span>
+                    </span>
+                    <span className="text-[12px] text-[color:var(--muted)] tnum">{m.likes}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </Panel>
       </div>
     </div>
   );
 }
+
+
+
+
 /* =====================  STUDY STUDIO  ===================== */
 function Flash({ cs }) {
   const [i, setI] = useState(0);
@@ -1023,10 +1131,37 @@ function Quiz({ qs }) {
   );
 }
 
+
+/* ------- Gemma generated study pack with local revision fallback ------- */
+function SummaryPanel({ localSum, terms, aiPack, aiLoading, aiError, onGenerate, disabled }) {
+  return (
+    <div>
+      <Head title="Study summary" sub={aiPack ? `Generated by ${aiPack.model || 'Gemma'}.` : 'Generate a summary, flashcards and practice questions from this note with Gemma.'} />
+      {aiPack ? (
+        <>
+          <p className="text-[14.5px] leading-relaxed">{aiPack.summary}</p>
+          {aiPack.key_terms?.length > 0 && <div className="mt-4"><div className="text-[12px] text-[color:var(--muted)] mb-2 font-semibold">KEY TERMS</div><div className="flex flex-wrap gap-2">{aiPack.key_terms.map((t, i) => <span key={`${t}-${i}`} className="tag tag-acc">{t}</span>)}</div></div>}
+        </>
+      ) : localSum.length ? (
+        <ul className="space-y-2.5">{localSum.map((s, k) => <li key={k} className="flex gap-3 text-[14px] leading-relaxed"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-[color:var(--acc)] shrink-0" />{s}</li>)}</ul>
+      ) : <Empty>Write a few sentences, then generate a Gemma study set.</Empty>}
+      {!aiPack && terms.length > 0 && <div className="mt-4"><div className="text-[12.5px] text-[color:var(--muted)] mb-2">Key terms</div><div className="flex flex-wrap gap-2">{terms.map(t => <span key={t} className="tag tag-acc">{t}</span>)}</div></div>}
+      {aiError && <p role="alert" className="text-[13px] text-[color:var(--warn)] mt-3">{aiError}</p>}
+      <Btn sm v="primary" className="mt-4" onClick={onGenerate} disabled={disabled || aiLoading}>
+        <Icon n="spark" s={14} />{aiLoading ? 'Gemma is building your study set…' : aiPack ? 'Regenerate with Gemma' : 'Generate with Gemma'}
+      </Btn>
+      {aiLoading && <p className="text-[12px] text-[color:var(--muted)] mt-2">The first response can take a minute while the local model loads.</p>}
+    </div>
+  );
+}
+
 function Studio({ S }) {
   const { notes, setNotes, toast, intent, clearIntent } = S;
   const [aid, setAid] = useState(notes[0] ? notes[0].id : null);
   const [tool, setTool] = useState('summary');
+  const [generated, setGenerated] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState('');
   const note = notes.find(n => n.id === aid) || notes[0];
   useEffect(() => {
     if (intent && intent.newNote) { addNote(); clearIntent(); }
@@ -1041,7 +1176,28 @@ function Studio({ S }) {
   const terms = useMemo(() => keyTerms(body, 7), [body]);
   const cs = useMemo(() => cardsOf(body), [body]);
   const qs = useMemo(() => questionsOf(body), [body]);
+  const aiPack = generated && generated.noteId === note?.id && generated.body === body ? generated.data : null;
+  const aiCards = (aiPack?.flashcards || []).filter(c => c.term && c.definition).map((c, i) => ({ id: `gemma-${i}`, q: c.term, a: c.definition }));
+  const aiQuestions = (aiPack?.practice_questions || []).map((q, i) => typeof q === 'string' ? { k: 'Gemma practice question', q, a: '' } : ({ k: 'Gemma practice question', q: q.question || q.q || '', a: q.answer || q.a || '' })).filter(q => q.q);
   const wc = (body.match(/\S+/g) || []).length;
+
+  const generateStudyPack = async () => {
+    if (!note || body.trim().length < 20 || aiLoading) return;
+    setAiLoading(true); setAiError(''); setGenerated(null);
+    try {
+      const response = await fetch('/api/ai/summarize', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: body }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.error || 'Gemma is unavailable. Start Ollama and make sure the configured model is installed.');
+      setGenerated({ noteId: note.id, body, data });
+      setTool('summary');
+      toast('Gemma study set generated');
+    } catch (error) {
+      setAiError(error.message || 'Could not reach Gemma. Check that the CampusOS server and Ollama are running.');
+    } finally { setAiLoading(false); }
+  };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[230px_minmax(0,1fr)_minmax(0,1.05fr)] gap-4 lg:gap-5">
@@ -1066,12 +1222,16 @@ function Studio({ S }) {
             <input className="field !bg-transparent !border-transparent !px-0 font-display text-[22px] tracking-tight" value={note.title} onChange={e => upd({ title: e.target.value })} aria-label="Note title" placeholder="Note title" />
             <Btn v="quiet" sm aria-label="Delete note" onClick={() => { const rest = notes.filter(n => n.id !== note.id); setNotes(rest); setAid(rest[0] ? rest[0].id : null); toast('Note deleted'); }}><Icon n="trash" s={16} /></Btn>
           </div>
-          <textarea className="field text-[14.5px]" rows={16} value={note.body} onChange={e => upd({ body: e.target.value })} aria-label="Note body"
+          <textarea className="field text-[14.5px]" rows={16} maxLength={8000} value={note.body} onChange={e => upd({ body: e.target.value })} aria-label="Note body"
             placeholder={'Write notes here.\nTip: lines written as “Term: definition” turn into flashcards.'} />
-          <div className="flex flex-wrap justify-between gap-2 mt-3 text-[12.5px] text-[color:var(--muted)] tnum">
+          <div className="flex flex-wrap items-center justify-between gap-2 mt-3 text-[12.5px] text-[color:var(--muted)] tnum">
             <span>{wc} words, about {Math.max(1, Math.round(wc / 200))} min read</span>
-            <span>{cs.length} cards, {qs.length} questions, saved in this browser</span>
+            <span>{aiPack ? `${aiCards.length} Gemma cards, ${aiQuestions.length} Gemma questions` : `${cs.length} local cards, ${qs.length} local questions`}</span>
           </div>
+          <Btn sm v="primary" className="mt-3" onClick={generateStudyPack} disabled={body.trim().length < 20 || aiLoading}>
+            <Icon n="spark" s={14} />{aiLoading ? 'Gemma is creating your study set…' : aiPack ? 'Regenerate summary, cards and questions' : 'Generate summary, flashcards and questions with Gemma'}
+          </Btn>
+          {aiError && <p role="alert" className="text-[13px] text-[color:var(--warn)] mt-2">{aiError}</p>}
         </Panel>
       ) : (
         <Panel><Empty>No notes yet. Create one to start.</Empty></Panel>
@@ -1082,16 +1242,8 @@ function Studio({ S }) {
           {[['summary', 'Summary'], ['cards', 'Flashcards'], ['quiz', 'Questions']].map(([k, l]) => <Chip key={k} on={tool === k} onClick={() => setTool(k)}>{l}</Chip>)}
         </div>
         {!note ? <Empty>Pick or create a note first.</Empty> : tool === 'summary' ? (
-          <div>
-            <Head title="Quick summary" sub="Picks the most information-dense sentences using word frequency. It runs in your browser and is not an AI model, so skim it as a revision aid, not a replacement for reading." />
-            {sum.length ? (
-              <ul className="space-y-2.5">
-                {sum.map((s, k) => <li key={k} className="flex gap-3 text-[14px] leading-relaxed"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-[color:var(--acc)] shrink-0" />{s}</li>)}
-              </ul>
-            ) : <Empty>Write at least a couple of full sentences to get a summary.</Empty>}
-            {terms.length > 0 && <div className="mt-5"><div className="text-[12.5px] text-[color:var(--muted)] mb-2">Most repeated terms</div><div className="flex flex-wrap gap-2">{terms.map(t => <span key={t} className="tag tag-acc">{t}</span>)}</div></div>}
-          </div>
-        ) : tool === 'cards' ? <Flash key={note.id} cs={cs} /> : <Quiz key={note.id} qs={qs} />}
+          <SummaryPanel localSum={sum} terms={terms} aiPack={aiPack} aiLoading={aiLoading} aiError={aiError} onGenerate={generateStudyPack} disabled={body.trim().length < 20} />
+        ) : tool === 'cards' ? <Flash key={note.id} cs={aiPack ? aiCards : cs} /> : <Quiz key={note.id} qs={aiPack ? aiQuestions : qs} />}
       </Panel>
     </div>
   );
@@ -1381,29 +1533,81 @@ function assist(q, c) {
 
 function Assistant({ S }) {
   const { go, att, thr, tasks, events, notes, lf, market, pins } = S;
-  const [msgs, setMsgs] = useState([{ id: 'm0', role: 'bot', t: 'Hi. I can answer questions about the sample campus data and about what’s in this app. What would you like to know?', src: 'Demo assistant' }]);
+  const [aiStatus, setAiStatus] = useState({ available: false, model: 'gemma4:e4b' });
+  const [msgs, setMsgs] = useState([
+    { id: 'm0', role: 'bot', t: 'Hi! I am Campus AI for NIT Hamirpur. You can ask me questions about campus landmarks, study topics, deadlines, or life at NITH.', src: 'Campus AI' }
+  ]);
   const [v, setV] = useState('');
   const [busy, setBusy] = useState(false);
   const box = useRef(null);
+
+  useEffect(() => {
+    fetch('/api/ai/status')
+      .then(r => r.json())
+      .then(data => setAiStatus(data))
+      .catch(() => setAiStatus({ available: false, model: 'gemma4:e4b' }));
+  }, []);
+
   useEffect(() => { if (box.current) box.current.scrollTop = box.current.scrollHeight; }, [msgs, busy]);
-  const ask = text => {
+
+  const ask = async text => {
     const q = text.trim(); if (!q || busy) return;
-    setMsgs(m => [...m, { id: uid(), role: 'me', t: q }]); setV(''); setBusy(true);
+    setMsgs(m => [...m, { id: uid(), role: 'me', t: q }]);
+    setV('');
+    setBusy(true);
+
+    // If Gemma is available on the backend, ask Gemma with campus context
+    if (aiStatus.available) {
+      try {
+        const campusContext = `NIT Hamirpur campus context:
+Open tasks: ${tasks.filter(t => !t.done).map(t => t.title).join(', ')}.
+Events: ${events.map(e => `${e.title} at ${e.place}`).join(', ')}.
+Attendance: ${att.map(a => `${a.name}: ${a.attended}/${a.total}`).join(', ')}.
+Locations: Central Library, Admin Block, Lecture Hall Complex (LHC), Computer Centre, Food Court, Sports Ground, Sunset Point.`;
+
+        const res = await fetch('/api/ai/question', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: q, context: campusContext }),
+        });
+        const data = await res.json();
+        if (data.success && data.answer) {
+          setMsgs(m => [...m, { id: uid(), role: 'bot', t: data.answer, src: `Gemma 4 E4B (${aiStatus.model})` }]);
+          setBusy(false);
+          return;
+        }
+      } catch (e) {
+        // Fallback to local rule-based assistant
+      }
+    }
+
+    // Local rule-based assistant fallback
     setTimeout(() => {
       const r = assist(q, { att, thr, tasks, events, notes, lf, market, pins });
-      setMsgs(m => [...m, { id: uid(), role: 'bot', ...r }]); setBusy(false);
-    }, 450);
+      setMsgs(m => [...m, { id: uid(), role: 'bot', ...r }]);
+      setBusy(false);
+    }, 400);
   };
+
   const prompts = ['Which subjects are short on attendance?', 'What is due this week?', 'Where can I get food?', 'What events are coming up?', 'Where is the library?', 'Any lost items posted?'];
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4 lg:gap-5">
       <Panel glow className="flex flex-col !p-0 overflow-hidden">
         <div className="px-[var(--pad)] pt-[var(--pad)] pb-3 border-b border-[color:var(--line)]">
           <div className="flex items-center justify-between gap-3">
             <h1 className="font-display text-[30px] leading-none tracking-tight">Campus AI</h1>
-            <span className="tag tag-warn">Demo: no AI connected</span>
+            {aiStatus.available ? (
+              <span className="tag tag-acc">Gemma 4 E4B Connected</span>
+            ) : (
+              <span className="tag tag-warn">Local Rule-Based (Ollama offline)</span>
+            )}
           </div>
-          <p className="text-[13px] text-[color:var(--muted)] mt-2">Answers come from a small built-in set of sample facts plus your data in this app, matched by keyword. It can’t reason, browse or look anything up.</p>
+          <p className="text-[13px] text-[color:var(--muted)] mt-2">
+            {aiStatus.available
+              ? 'Powered by local on-device Gemma 4 E4B model via Ollama. Private and secure.'
+              : 'Keyword assistant over campus data. Start Ollama (`ollama serve`) to activate Gemma neural responses.'}
+          </p>
         </div>
         <div ref={box} className="h-[420px] sm:h-[460px] overflow-y-auto px-[var(--pad)] py-5 space-y-4" aria-live="polite">
           {msgs.map(m => (
@@ -1419,14 +1623,16 @@ function Assistant({ S }) {
           {busy && <div className="msgIn inset inline-flex gap-1.5 px-4 py-3 rounded-2xl" aria-label="Assistant is replying">{[0, 1, 2].map(i => <span key={i} className="w-1.5 h-1.5 rounded-full bg-[color:var(--muted)]" style={{ opacity: 0.4 + i * 0.25 }} />)}</div>}
         </div>
         <form onSubmit={e => { e.preventDefault(); ask(v); }} className="flex gap-2 p-3 sm:p-4 border-t border-[color:var(--line)]">
-          <input className="field" placeholder="Ask about campus" value={v} onChange={e => setV(e.target.value)} aria-label="Ask a question" />
+          <input className="field" placeholder="Ask about campus or studies" value={v} onChange={e => setV(e.target.value)} aria-label="Ask a question" />
           <Btn v="primary" type="submit" disabled={!v.trim() || busy} aria-label="Send"><Icon n="send" s={16} /></Btn>
         </form>
       </Panel>
       <Panel className="lg:self-start">
         <Head title="Try asking" />
         <ul className="space-y-2">{prompts.map(p => <li key={p}><button onClick={() => ask(p)} className="inset w-full text-left px-3.5 py-2.5 text-[13.5px] cursor-pointer">{p}</button></li>)}</ul>
-        <div className="mt-5 text-[12.5px] text-[color:var(--dim)] leading-relaxed">Conversation lives in memory and clears when you leave this page.</div>
+        <div className="mt-5 text-[12.5px] text-[color:var(--dim)] leading-relaxed">
+          {aiStatus.available ? 'Responses generated in real time using local Gemma inference.' : 'Conversation is private and stays in your browser.'}
+        </div>
       </Panel>
     </div>
   );
@@ -1442,11 +1648,11 @@ function ProfileView({ S }) {
   const q = (k, v) => setPrefs({ ...prefs, [k]: v });
   const [confirm, setConfirm] = useState(false);
   const status = [
-    ['Sign-in and accounts', 'Not connected. There is no login; you are a local guest.', false],
-    ['Database and sync', 'Not connected. Data is kept in this browser only.', false],
-    ['Campus map', 'Hand-drawn illustration. No map provider is connected.', false],
-    ['AI assistant', 'Not connected. Keyword matching over sample data.', false],
-    ['Study tools', 'Work on your device with simple word-frequency rules.', true],
+    ['Sign-in and accounts', 'Not connected. Guest mode — local profile only. No institute SSO.', false],
+    ['Database and sync', 'SQLite via FastAPI backend. Memories, posts, tasks, events are persisted.', true],
+    ['Campus map', 'Native 3D NIT Hamirpur map served locally. No external tile service.', true],
+    ['AI assistant (Gemma)', 'Gemma 4 E4B via Ollama. Click "Summarize with Gemma AI" in Study Studio.', true],
+    ['Study tools', 'Flashcards and practice questions run on your device (word-frequency rules).', true],
   ];
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5">
@@ -1523,6 +1729,7 @@ function App() {
   const [profile, setProfile] = useStored('profile', seedProfile);
   const [prefs, setPrefs] = useStored('prefs', seedPrefs);
   const [att, setAtt] = useStored('att', seedAtt);
+  const [timetable, setTimetable] = useStored('timetable', seedTimetable);
   const [tasks, setTasks] = useStored('tasks', seedTasks);
   const [events, setEvents] = useStored('events', seedEvents);
   const [notes, setNotes] = useStored('notes', seedNotes);
@@ -1534,7 +1741,7 @@ function App() {
   const tt = useRef(null);
   const toast = useCallback(m => { setToastMsg(m); clearTimeout(tt.current); tt.current = setTimeout(() => setToastMsg(''), 2800); }, []);
   const go = useCallback((k, i) => { setTab(k); setIntent(i || null); window.scrollTo({ top: 0 }); }, []);
-  const resetAll = () => { setProfile(seedProfile()); setPrefs(seedPrefs()); setAtt(seedAtt()); setTasks(seedTasks()); setEvents(seedEvents()); setNotes(seedNotes()); setPins(seedPins()); setThreads(seedThreads()); setLf(seedLF()); setMarket(seedMarket()); };
+  const resetAll = () => { setProfile(seedProfile()); setPrefs(seedPrefs()); setAtt(seedAtt()); setTimetable(seedTimetable()); setTasks(seedTasks()); setEvents(seedEvents()); setNotes(seedNotes()); setPins(seedPins()); setThreads(seedThreads()); setLf(seedLF()); setMarket(seedMarket()); };
 
   useEffect(() => {
     const a = ACCENTS[prefs.acc] || ACCENTS[0], r = document.documentElement;
@@ -1542,7 +1749,7 @@ function App() {
     r.classList.toggle('rm', !!prefs.reduce); r.classList.toggle('compact', !!prefs.compact);
   }, [prefs]);
 
-  const S = { profile, setProfile, prefs, setPrefs, thr: prefs.thr, att, setAtt, tasks, setTasks, events, setEvents, notes, setNotes, pins, setPins, threads, setThreads, lf, setLf, market, setMarket, go, toast, resetAll, intent, clearIntent: () => setIntent(null) };
+  const S = { profile, setProfile, prefs, setPrefs, thr: prefs.thr, att, setAtt, timetable, setTimetable, tasks, setTasks, events, setEvents, notes, setNotes, pins, setPins, threads, setThreads, lf, setLf, market, setMarket, go, toast, resetAll, intent, clearIntent: () => setIntent(null) };
   const cur = NAV.find(n => n.k === tab);
 
   const NavBtn = ({ n, side }) => {

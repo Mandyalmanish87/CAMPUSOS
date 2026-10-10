@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CampusOS for NIT Hamirpur (demo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..600&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { fontFamily: {
+      display: ['Fraunces', 'Georgia', 'serif'],
+      sans: ['"Hanken Grotesk"', 'system-ui', 'sans-serif']
+    } } }
+  };
+</script>
+<style>
+:root{
+  --bg:#0B0D0C; --panel:rgba(31,35,33,.6); --line:rgba(255,255,255,.085);
+  --text:#ECEFEA; --muted:#98A099; --dim:#69716B;
+  --acc:#C8FF45; --acc-rgb:200,255,69; --warn:#FFB454; --bad:#FF7A6B;
+  --pad:22px;
+  box-sizing:border-box; color-scheme:dark;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+:root.compact{--pad:15px}
+html{scroll-padding-top:env(safe-area-inset-top,0px);background:var(--bg)}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Hanken Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(900px 520px at 88% -8%,rgba(var(--acc-rgb),.10),transparent 62%),
+             radial-gradient(760px 520px at -8% 108%,rgba(var(--acc-rgb),.055),transparent 62%)}
+#root{position:relative;z-index:1}
+button{font-family:inherit;color:inherit}
+::selection{background:rgba(var(--acc-rgb),.3)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+*{scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.14) transparent}
+.tnum{font-variant-numeric:tabular-nums}
+
+.glass{background:var(--panel);backdrop-filter:blur(18px) saturate(1.25);-webkit-backdrop-filter:blur(18px) saturate(1.25);
+  border:1px solid var(--line);border-radius:22px;transition:border-color .25s,box-shadow .25s}
+.glass:hover{border-color:rgba(var(--acc-rgb),.2)}
+.glow{border-color:rgba(var(--acc-rgb),.42)!important;box-shadow:0 0 0 1px rgba(var(--acc-rgb),.08),0 0 44px -14px rgba(var(--acc-rgb),.4)}
+.pad{padding:var(--pad)}
+.inset{background:rgba(255,255,255,.035);border:1px solid var(--line);border-radius:14px;transition:border-color .2s,background .2s}
+.inset:hover{border-color:rgba(255,255,255,.16)}
+.inset-on{border-color:rgba(var(--acc-rgb),.45)!important;background:rgba(var(--acc-rgb),.06)}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:12px;padding:9px 14px;font-weight:600;font-size:13.5px;line-height:1.1;
+  border:1px solid transparent;cursor:pointer;transition:all .2s;white-space:nowrap}
+.btn-primary{background:var(--acc);color:#0B0D0C}
+.btn-primary:hover{box-shadow:0 0 26px -4px rgba(var(--acc-rgb),.65)}
+.btn-ghost{background:rgba(255,255,255,.04);border-color:var(--line)}
+.btn-ghost:hover{border-color:rgba(var(--acc-rgb),.45)}
+.btn-quiet{color:var(--muted);padding:6px 8px}
+.btn-quiet:hover{color:var(--text)}
+.btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.btn-sm{padding:6px 10px;font-size:12.5px;border-radius:10px}
+
+.chip{border:1px solid var(--line);border-radius:999px;padding:6px 13px;font-size:12.5px;color:var(--muted);background:rgba(255,255,255,.03);cursor:pointer;transition:all .2s;white-space:nowrap}
+.chip:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+.chip-on{color:#0B0D0C!important;background:var(--acc)!important;border-color:var(--acc)!important;font-weight:600}
+.tag{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 9px;font-size:11.5px;border:1px solid var(--line);color:var(--muted)}
+.tag-acc{color:var(--acc);border-color:rgba(var(--acc-rgb),.35);background:rgba(var(--acc-rgb),.07)}
+.tag-warn{color:var(--warn);border-color:rgba(255,180,84,.35);background:rgba(255,180,84,.07)}
+.tag-bad{color:var(--bad);border-color:rgba(255,122,107,.35);background:rgba(255,122,107,.07)}
+.demo-tag{display:inline-flex;align-items:center;border-radius:999px;padding:3px 9px;font-size:11px;color:var(--muted);border:1px dashed rgba(var(--acc-rgb),.4)}
+
+.field{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:14px;color:var(--text);font-family:inherit;transition:border-color .2s,box-shadow .2s}
+.field::placeholder{color:var(--dim)}
+.field:focus{outline:none;border-color:rgba(var(--acc-rgb),.6);box-shadow:0 0 0 3px rgba(var(--acc-rgb),.12)}
+select.field{appearance:none;background-image:linear-gradient(45deg,transparent 50%,#98A099 50%),linear-gradient(135deg,#98A099 50%,transparent 50%);background-position:calc(100% - 18px) 55%,calc(100% - 13px) 55%;background-size:5px 5px;background-repeat:no-repeat;padding-right:32px}
+select.field option{background:#151816;color:var(--text)}
+textarea.field{resize:vertical;line-height:1.6}
+label.lbl{display:block;font-size:12.5px;color:var(--muted);margin-bottom:6px}
+
+.view{animation:viewIn .3s ease both}
+@keyframes viewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.msgIn{animation:viewIn .25s ease both}
+
+/* flashcards */
+.flip{perspective:1200px}
+.flip-inner{position:relative;width:100%;height:100%;transition:transform .55s cubic-bezier(.3,.8,.3,1);transform-style:preserve-3d}
+.flip-on .flip-inner{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:18px;padding:22px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center}
+.face-back{transform:rotateY(180deg)}
+
+/* map */
+.s-acc{stroke:rgb(var(--acc-rgb))}
+.f-acc{fill:rgb(var(--acc-rgb))}
+.pin{cursor:pointer;outline:none}
+.pin .ring{fill:none;stroke:transparent;stroke-width:2}
+.pin:focus-visible .ring{stroke:rgb(var(--acc-rgb))}
+.pin .dot{transition:r .2s,fill .2s}
+.pin:hover .dot{fill:rgba(var(--acc-rgb),.35)}
+.pulse{transform-box:fill-box;transform-origin:center;animation:pulse 2.2s ease-out infinite}
+@keyframes pulse{0%{transform:scale(.5);opacity:.7}100%{transform:scale(2.4);opacity:0}}
+.dropping{cursor:crosshair}
+
+/* switch */
+.sw{width:42px;height:24px;border-radius:999px;background:rgba(255,255,255,.12);position:relative;transition:background .2s;border:0;cursor:pointer;flex-shrink:0}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#ECEFEA;transition:transform .2s}
+.sw[aria-checked="true"]{background:var(--acc)}
+.sw[aria-checked="true"]::after{transform:translateX(18px);background:#0B0D0C}
+
+input[type=range]{accent-color:var(--acc);width:100%}
+.hscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.hscroll::-webkit-scrollbar{display:none}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+:root.rm *,:root.rm *::before,:root.rm *::after{animation:none!important;transition:none!important}
+
+/* ---- Leaflet 1.9.4 core (inlined: hosted CSS is blocked on published pages) ---- */
+.leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,.leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box,.leaflet-image-layer,.leaflet-layer{position:absolute;left:0;top:0}
+.leaflet-container{overflow:hidden}
+.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow{-webkit-user-select:none;user-select:none;-webkit-user-drag:none}
+.leaflet-tile::selection{background:transparent}
+.leaflet-safari .leaflet-tile{image-rendering:-webkit-optimize-contrast}
+.leaflet-safari .leaflet-tile-container{width:1600px;height:1600px;-webkit-transform-origin:0 0}
+.leaflet-marker-icon,.leaflet-marker-shadow{display:block}
+.leaflet-container .leaflet-overlay-pane svg{max-width:none!important;max-height:none!important}
+.leaflet-container .leaflet-marker-pane img,.leaflet-container .leaflet-shadow-pane img,.leaflet-container .leaflet-tile-pane img,.leaflet-container img.leaflet-image-layer,.leaflet-container .leaflet-tile{max-width:none!important;max-height:none!important;width:auto;padding:0}
+.leaflet-container img.leaflet-tile{mix-blend-mode:plus-lighter}
+.leaflet-container.leaflet-touch-zoom{touch-action:pan-x pan-y}
+.leaflet-container.leaflet-touch-drag{touch-action:pinch-zoom}
+.leaflet-container.leaflet-touch-drag.leaflet-touch-zoom{touch-action:none}
+.leaflet-container{-webkit-tap-highlight-color:transparent}
+.leaflet-tile{filter:inherit;visibility:hidden}
+.leaflet-tile-loaded{visibility:inherit}
+.leaflet-zoom-box{width:0;height:0;box-sizing:border-box;z-index:800}
+.leaflet-pane{z-index:400}
+.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}.leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
+.leaflet-map-pane canvas{z-index:100}.leaflet-map-pane svg{z-index:200}
+.leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
+.leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}
+.leaflet-top{top:0}.leaflet-right{right:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}
+.leaflet-right .leaflet-control{float:right}
+.leaflet-top .leaflet-control{margin-top:10px}.leaflet-bottom .leaflet-control{margin-bottom:10px}
+.leaflet-left .leaflet-control{margin-left:10px}.leaflet-right .leaflet-control{margin-right:10px}
+.leaflet-zoom-animated{transform-origin:0 0}
+svg.leaflet-zoom-animated{will-change:transform}
+.leaflet-zoom-anim .leaflet-zoom-animated{transition:transform .25s cubic-bezier(0,0,.25,1)}
+.leaflet-zoom-anim .leaflet-tile,.leaflet-pan-anim .leaflet-tile{transition:none}
+.leaflet-zoom-anim .leaflet-zoom-hide{visibility:hidden}
+.leaflet-interactive{cursor:pointer}
+.leaflet-grab{cursor:grab}
+.leaflet-crosshair,.leaflet-crosshair .leaflet-interactive{cursor:crosshair}
+.leaflet-control{cursor:auto}
+.leaflet-dragging .leaflet-grab,.leaflet-dragging .leaflet-grab .leaflet-interactive,.leaflet-dragging .leaflet-marker-draggable{cursor:grabbing}
+.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-image-layer,.leaflet-pane>svg path,.leaflet-tile-container{pointer-events:none}
+.leaflet-marker-icon.leaflet-interactive,.leaflet-image-layer.leaflet-interactive,.leaflet-pane>svg path.leaflet-interactive{pointer-events:auto}
+.leaflet-container{font-family:'Hanken Grotesk',system-ui,sans-serif;font-size:12px;line-height:1.5;background:#0E1210;outline-offset:1px}
+.leaflet-container a{color:var(--acc)}
+.leaflet-bar{border-radius:12px;overflow:hidden;border:1px solid var(--line);box-shadow:0 6px 24px -8px rgba(0,0,0,.7)}
+.leaflet-bar a{background:rgba(18,21,19,.92);backdrop-filter:blur(10px);color:var(--text);border-bottom:1px solid var(--line);width:34px;height:34px;line-height:34px;display:block;text-align:center;text-decoration:none;font:600 18px 'Hanken Grotesk',sans-serif;transition:background .2s,color .2s}
+.leaflet-bar a:last-child{border-bottom:none}
+.leaflet-bar a:hover,.leaflet-bar a:focus{background:rgba(var(--acc-rgb),.14);color:var(--acc)}
+.leaflet-bar a.leaflet-disabled{opacity:.4;cursor:default}
+.leaflet-container .leaflet-control-attribution{background:rgba(11,13,12,.82);color:var(--muted);margin:0;padding:2px 8px;border-top-left-radius:10px;font-size:11px}
+.leaflet-control-attribution a{text-decoration:none}
+.leaflet-control-attribution a:hover{text-decoration:underline}
+.leaflet-div-icon{background:transparent;border:0}
+/* dark-mode treatment for OpenStreetMap tiles so the map sits inside CampusOS */
+.map-dark .leaflet-tile-pane{filter:invert(1) hue-rotate(180deg) brightness(.8) contrast(.92) saturate(.5)}
+/* markers */
+.mk{width:28px;height:28px;display:grid;place-items:center;cursor:pointer}
+.mk i{display:block;width:14px;height:14px;border-radius:50%;background:#0B0D0C;border:2.5px solid var(--acc);transition:all .2s}
+.mk-on i{background:var(--acc);box-shadow:0 0 0 6px rgba(var(--acc-rgb),.25),0 0 18px rgba(var(--acc-rgb),.55)}
+.mk-ref i{width:17px;height:17px;border-radius:5px;transform:rotate(45deg);background:var(--acc);border-color:#0B0D0C;box-shadow:0 0 0 5px rgba(var(--acc-rgb),.2),0 0 18px rgba(var(--acc-rgb),.5)}
+.mk-ref.mk-on i{box-shadow:0 0 0 8px rgba(var(--acc-rgb),.3),0 0 24px rgba(var(--acc-rgb),.8)}
+.mk-draft i{background:transparent;border-style:dashed}
+.leaflet-marker-icon:focus-visible{outline:2px solid var(--acc);outline-offset:0;border-radius:50%}
+.lg{display:inline-block;width:12px;height:12px;flex-shrink:0}
+.lg-ref{background:var(--acc);border-radius:3px;transform:rotate(45deg);box-shadow:0 0 0 3px rgba(var(--acc-rgb),.2)}
+.lg-pin{border-radius:50%;border:2px solid var(--acc);background:#0B0D0C}
+.lg-draft{border-radius:50%;border:2px dashed var(--acc)}
+.map-wrap{height:380px}
+@media (min-width:640px){.map-wrap{height:480px}}
+@media (min-width:1024px){.map-wrap{height:560px}}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.24.7/babel.min.js"></script>
+<script type="text/babel" data-presets="react">
+const { useState, useEffect, useMemo, useRef, useCallback, createContext, useContext } = React;
+const Ctx = createContext(null);
+
+/* ---------- storage (browser only, per viewer) ---------- */
+function useStored(key, init) {
+  const make = () => (typeof init === 'function' ? init() : init);
+  const [v, setV] = useState(() => {
+    try { const s = localStorage.getItem('campusos:' + key); return s ? JSON.parse(s) : make(); }
+    catch (e) { return make(); }
+  });
+  useEffect(() => { try { localStorage.setItem('campusos:' + key, JSON.stringify(v)); } catch (e) {} }, [key, v]);
+  return [v, setV];
+}
+const uid = () => Math.random().toString(36).slice(2, 9);
+function useNow() {
+  const [n, setN] = useState(new Date());
+  useEffect(() => { const t = setInterval(() => setN(new Date()), 30000); return () => clearInterval(t); }, []);
+  return n;
+}
+
+/* ---------- dates ---------- */
+const DAY = 864e5;
+const sod = d => { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; };
+const addDays = n => new Date(sod(new Date()).getTime() + n * DAY).toISOString();
+const daysTo = iso => Math.round((sod(iso) - sod(new Date())) / DAY);
+const dueLabel = iso => { const n = daysTo(iso); return n < 0 ? `${-n}d overdue` : n === 0 ? 'Due today' : n === 1 ? 'Due tomorrow' : `Due in ${n} days`; };
+const mm = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
+/* ---------- attendance maths ---------- */
+const pct = a => (a.tot ? (a.att / a.tot) * 100 : 100);
+function slack(a, thr) {
+  if (pct(a) >= thr) return { ok: true, n: Math.max(0, Math.floor((a.att * 100) / thr - a.tot + 1e-9)) };
+  return { ok: false, n: Math.ceil((thr * a.tot - 100 * a.att) / (100 - thr) - 1e-9) };
+}
+
+/* ---------- on-device study helpers (no AI model) ---------- */
+const STOP = new Set('a an the and or of to in is are was were be been it its this that these those for on as at by with from into than then so such not no can may will which who whom their there they them his her our your you we also but if when while about over under between more most only each other any both very just used use using usually almost'.split(' '));
+const sentences = t => (t.replace(/\n+/g, ' ').match(/[^.!?]+[.!?]+/g) || [t]).map(s => s.trim()).filter(s => s.length > 25);
+const wordsOf = s => (s.toLowerCase().match(/[a-z][a-z-]{2,}/g) || []).filter(w => !STOP.has(w));
+function summarize(t, n = 3) {
+  const S = sentences(t);
+  if (S.length <= n) return S;
+  const f = {};
+  S.forEach(s => wordsOf(s).forEach(w => (f[w] = (f[w] || 0) + 1)));
+  return S.map((s, i) => ({ s, i, v: wordsOf(s).reduce((a, w) => a + f[w], 0) / Math.sqrt(wordsOf(s).length || 1) }))
+    .sort((a, b) => b.v - a.v).slice(0, n).sort((a, b) => a.i - b.i).map(x => x.s);
+}
+function keyTerms(t, n = 6) {
+  const f = {};
+  wordsOf(t).forEach(w => (f[w] = (f[w] || 0) + 1));
+  return Object.entries(f).sort((a, b) => b[1] - a[1]).slice(0, n).map(x => x[0]);
+}
+const cardsOf = t => t.split('\n').map(l => l.match(/^([^:]{2,40}):\s+(.{8,})$/)).filter(Boolean).map((m, i) => ({ id: i, q: m[1].trim(), a: m[2].trim() }));
+function questionsOf(t) {
+  const defs = cardsOf(t).map(c => ({ k: 'Define', q: `In your own words, what is “${c.q}”?`, a: c.a }));
+  const gaps = sentences(t).map(s => {
+    const ws = (s.match(/[A-Za-z-]{6,}/g) || []).filter(w => !STOP.has(w.toLowerCase()));
+    if (!ws.length) return null;
+    const w = [...ws].sort((a, b) => b.length - a.length)[0];
+    return { k: 'Fill the gap', q: s.replace(w, '________'), a: `${w}. Full sentence: ${s}` };
+  }).filter(Boolean);
+  return [...defs, ...gaps.slice(0, 5)];
+}
+
+/* ---------- demo seed data (all invented) ---------- */
+const seedProfile = () => ({ name: 'Aarav Mehta', branch: 'Electronics & Communication Engineering', year: '3rd year, semester 5', roll: 'DEMO-ECE-0412', hostel: 'Hostel block (demo)', cgpa: '8.4', bio: 'Likes analog circuits, late-night chai and long walks to the sunset point.' });
+const seedPrefs = () => ({ thr: 75, reduce: false, compact: false, notify: true, acc: 0 });
+const seedAtt = () => [
+  { id: 'a1', name: 'Analog Electronics', att: 31, tot: 36 },
+  { id: 'a2', name: 'Digital Signal Processing', att: 27, tot: 34 },
+  { id: 'a3', name: 'Electromagnetic Theory', att: 22, tot: 33 },
+  { id: 'a4', name: 'Microprocessors', att: 29, tot: 35 },
+  { id: 'a5', name: 'Communication Systems', att: 30, tot: 32 },
+  { id: 'a6', name: 'Electronics Lab', att: 11, tot: 12 },
+];
+const seedTasks = () => [
+  { id: 't1', title: 'Zener regulator lab report', course: 'Electronics Lab', due: addDays(2), done: false },
+  { id: 't2', title: 'DSP problem set 4', course: 'Digital Signal Processing', due: addDays(4), done: false },
+  { id: 't3', title: 'Revise Maxwell’s equations for the quiz', course: 'Electromagnetic Theory', due: addDays(1), done: false },
+  { id: 't4', title: 'Mini-project proposal', course: 'Microprocessors', due: addDays(8), done: false },
+  { id: 't5', title: 'Assignment 2', course: 'Communication Systems', due: addDays(-1), done: true },
+];
+const seedEvents = () => [
+  { id: 'e1', title: 'Open mic night', place: 'Auditorium', when: addDays(1), time: '18:30', going: false, count: 46 },
+  { id: 'e2', title: 'Resume clinic with alumni', place: 'Seminar room', when: addDays(3), time: '15:00', going: false, count: 28 },
+  { id: 'e3', title: 'Inter-branch football semifinal', place: 'Sports ground', when: addDays(4), time: '16:30', going: false, count: 112 },
+  { id: 'e4', title: 'Robotics club induction', place: 'LHC 101', when: addDays(6), time: '17:00', going: false, count: 63 },
+  { id: 'e5', title: 'Sunrise photo walk', place: 'Main gate', when: addDays(9), time: '06:00', going: false, count: 19 },
+];
+const TT = [
+  { s: 540, e: 600, n: 'Analog Electronics', r: 'LHC 204' },
+  { s: 600, e: 660, n: 'Electromagnetic Theory', r: 'LHC 204' },
+  { s: 675, e: 735, n: 'Digital Signal Processing', r: 'LHC 112' },
+  { s: 840, e: 1020, n: 'Electronics Lab', r: 'ECE Lab 2' },
+];
+const seedNotes = () => [
+  { id: 'n1', title: 'Zener diode and voltage regulation', body:
+`A zener diode is a heavily doped p-n junction designed to operate in reverse breakdown. In the breakdown region the voltage across it stays nearly constant while the current changes over a wide range. This property makes it useful as a simple shunt voltage regulator.
+Zener voltage: the reverse voltage at which the diode enters breakdown and holds its output steady.
+Knee current: the minimum reverse current needed to keep the diode in stable breakdown.
+Series resistor: limits the current so the zener stays within its power rating.
+Line regulation: how much the output voltage changes when the input supply changes.
+Load regulation: how much the output voltage changes when the load current changes.
+Avalanche breakdown: carriers gain enough energy in a wide depletion region to free more carriers by collision.
+Zener breakdown: a strong electric field in a thin depletion region pulls electrons directly across the junction.
+For regulation to work, the input voltage must stay above the zener voltage and the load current must leave the zener above its knee current.` },
+  { id: 'n2', title: 'Op-amp basics', body:
+`An operational amplifier is a high-gain differential amplifier that is almost always used with negative feedback. Feedback sets the gain with external resistors instead of relying on the amplifier's own open-loop gain.
+Virtual short: with negative feedback, the two input terminals sit at nearly the same voltage.
+Inverting amplifier: gain is minus Rf divided by Rin and the output is 180 degrees out of phase with the input.
+Non-inverting amplifier: gain is one plus Rf divided by R1 and the output stays in phase with the input.
+Input impedance: an ideal op-amp draws no current at its inputs.
+Slew rate: the maximum rate at which the output voltage can change, usually quoted in volts per microsecond.
+CMRR: the ability of a differential amplifier to reject signals that are common to both inputs.` },
+  { id: 'n3', title: 'Fourier transform properties', body:
+`The Fourier transform expresses a signal as a sum of complex exponentials, moving it from the time domain to the frequency domain. Many operations that are hard in time become simple multiplications in frequency.
+Linearity: the transform of a weighted sum of signals is the same weighted sum of their transforms.
+Time shift: delaying a signal multiplies its spectrum by a phase factor and leaves the magnitude unchanged.
+Convolution: convolving two signals in time is the same as multiplying their spectra in frequency.
+Parseval's theorem: the total energy in the time domain equals the total energy in the frequency domain.
+Scaling: compressing a signal in time stretches its spectrum in frequency.` },
+];
+const PIN_CATS = ['Academic', 'Food', 'Living', 'Sports', 'Spots'];
+const seedPins = () => [
+  { id: 'p1', cat: 'Food', title: 'Food court steps', x: 237, y: 244, by: 'Riya, 3rd year', likes: 24, liked: false, memory: 'Where every group project got planned over chai that was always slightly too sweet. The top step catches the evening sun.' },
+  { id: 'p2', cat: 'Academic', title: 'Library, third-floor corner', x: 405, y: 300, by: 'Karan, 4th year', likes: 31, liked: false, memory: 'The window desk with the best view of the hills. A whole semester of notes got finished here during exam week.' },
+  { id: 'p3', cat: 'Spots', title: 'Sunset point', x: 725, y: 440, by: 'Demo student', likes: 58, liked: false, memory: 'A short climb from the sports ground. Go just before dusk: the valley turns orange and everyone goes quiet.' },
+  { id: 'p4', cat: 'Sports', title: 'Ground, late-night football', x: 650, y: 120, by: 'Imran, 2nd year', likes: 40, liked: false, memory: 'Hostel versus hostel on the first Friday of the semester. Nobody remembers the score, everyone remembers the rain.' },
+  { id: 'p5', cat: 'Academic', title: 'LHC corridor', x: 525, y: 232, by: 'Meera, 3rd year', likes: 17, liked: false, memory: 'Where results get shared before the portal even loads. Always crowded, always loud.' },
+  { id: 'p6', cat: 'Living', title: 'Hostel terrace', x: 135, y: 137, by: 'Aman, 2nd year', likes: 22, liked: false, memory: 'Rooftop cricket with a tennis ball and a rule list nobody ever wrote down.' },
+  { id: 'p7', cat: 'Spots', title: 'Main gate', x: 110, y: 455, by: 'Demo student', likes: 35, liked: false, memory: 'First day: parents, luggage and nervous smiles. The last day looks surprisingly similar.' },
+  { id: 'p8', cat: 'Academic', title: 'Auditorium backstage', x: 460, y: 407, by: 'Sana, 3rd year', likes: 19, liked: false, memory: 'Rehearsals ran past midnight before cultural night, powered entirely by biscuits.' },
+];
+const seedThreads = () => [
+  { id: 'd1', tag: 'Academics', title: 'What do examiners ask in the analog electronics viva?', author: 'Kavya (demo)', time: '2h ago', votes: 14, voted: false,
+    body: 'Our lab viva is next week. Seniors, what do examiners usually ask beyond the circuit diagram?',
+    replies: [
+      { id: uid(), author: 'Rohan (demo)', text: 'Be ready to explain why each component value was chosen, not just what it is.' },
+      { id: uid(), author: 'Meera (demo)', text: 'Know your observation table cold. They love asking what changes if one reading is off.' } ] },
+  { id: 'd2', tag: 'Campus life', title: 'Quiet corners for exam week?', author: 'Imran (demo)', time: '5h ago', votes: 9, voted: false,
+    body: 'The library fills up by 9 am. Any other places where I can actually focus for a few hours?',
+    replies: [{ id: uid(), author: 'Sana (demo)', text: 'Empty classrooms in the evening are underrated. Carry a charger.' }] },
+  { id: 'd3', tag: 'Events', title: 'Five-a-side before the semester gets heavy?', author: 'Aman (demo)', time: 'Yesterday', votes: 6, voted: false,
+    body: 'Looking for eight more people for a Sunday evening game at the ground. All skill levels welcome.', replies: [] },
+  { id: 'd4', tag: 'Placements', title: 'What should the resume clinic cover?', author: 'Riya (demo)', time: '2 days ago', votes: 11, voted: false,
+    body: 'Projects versus coursework, one page versus two, how to write internships. What would you want reviewed?', replies: [] },
+];
+const seedLF = () => [
+  { id: 'l1', type: 'lost', title: 'Black scientific calculator', place: 'LHC 204', time: '1 day ago', note: 'Name sticker on the back.', resolved: false, mine: false },
+  { id: 'l2', type: 'found', title: 'Keys on a blue lanyard', place: 'Library entrance', time: '3 hours ago', note: 'Left with the library desk (demo).', resolved: false, mine: false },
+  { id: 'l3', type: 'lost', title: 'Grey hoodie, size M', place: 'Sports ground bench', time: '2 days ago', note: 'Has a small tear on the left cuff.', resolved: false, mine: false },
+  { id: 'l4', type: 'found', title: 'Student ID card', place: 'Food court', time: 'Yesterday', note: 'Handed to the security desk (demo).', resolved: false, mine: false },
+];
+const MKT_CATS = ['Books', 'Electronics', 'Room', 'Transport', 'Other'];
+const seedMarket = () => [
+  { id: 'm1', title: 'Scientific calculator', price: 650, cond: 'Good', cat: 'Electronics', seller: 'Nikhil (demo)', desc: 'Works perfectly, minor scratches on the cover.', saved: false, sold: false, mine: false },
+  { id: 'm2', title: 'Engineering Mathematics III, two books', price: 300, cond: 'Used', cat: 'Books', seller: 'Priya (demo)', desc: 'Some pencil notes in the margins.', saved: false, sold: false, mine: false },
+  { id: 'm3', title: 'Bucket and mug set', price: 120, cond: 'Like new', cat: 'Room', seller: 'Sahil (demo)', desc: 'Used for one semester.', saved: false, sold: false, mine: false },
+  { id: 'm4', title: '21-speed cycle', price: 3200, cond: 'Good', cat: 'Transport', seller: 'Vikram (demo)', desc: 'Fresh tyres, new brake pads. Pick up near the main gate.', saved: false, sold: false, mine: false },
+  { id: 'm5', title: 'Breadboard and jumper wire kit', price: 250, cond: 'Like new', cat: 'Electronics', seller: 'Tanya (demo)', desc: 'Full-size breadboard, 65 jumper wires, a few LEDs.', saved: false, sold: false, mine: false },
+  { id: 'm6', title: 'Rechargeable study lamp', price: 400, cond: 'Good', cat: 'Room', seller: 'Dev (demo)', desc: 'Three brightness levels, lasts a full evening.', saved: false, sold: false, mine: false },
+];
+const ACCENTS = [
+  { n: 'Lime', h: '#C8FF45', r: '200,255,69' },
+  { n: 'Ice', h: '#7DF3E1', r: '125,243,225' },
+  { n: 'Amber', h: '#FFC24D', r: '255,194,77' },
+];
+
+/* ---------- icons ---------- */
+const IP = {
+  home: 'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
+  map: 'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14',
+  book: 'M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19V5M8 7h7',
+  users: 'M16 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM21 20v-1a4 4 0 0 0-3-3.9M16 4.1a3.5 3.5 0 0 1 0 6.8',
+  spark: 'M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z',
+  user: 'M20 21v-1a6 6 0 0 0-6-6h-4a6 6 0 0 0-6 6v1M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z',
+  plus: 'M12 5v14M5 12h14',
+  check: 'M5 12.5l4.5 4.5L19 7',
+  x: 'M6 6l12 12M18 6L6 18',
+  send: 'M22 2L11 13M22 2l-7 20-4-9-9-4z',
+  pin: 'M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21zM12 12a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  search: 'M11 18a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM21 21l-4.3-4.3',
+  heart: 'M12 20s-7-4.4-9-9a5 5 0 0 1 9-3 5 5 0 0 1 9 3c-2 4.6-9 9-9 9z',
+  up: 'M12 19V5M5 12l7-7 7 7',
+  chat: 'M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-5.4A8 8 0 1 1 21 12z',
+  flip: 'M4 4v6h6M20 20v-6h-6M20 10A8 8 0 0 0 6.3 6.3L4 10M4 14a8 8 0 0 0 13.7 3.7L20 14',
+  trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+  tag: 'M3 12V4h8l10 10-8 8z',
+  cal: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
+  shield: 'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',
+  bag: 'M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2',
+  clock: 'M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2',
+  bolt: 'M13 2L4 14h7l-1 8 9-12h-7z',
+  minus: 'M5 12h14',
+  shuffle: 'M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5',
+  note: 'M5 3h10l4 4v14H5zM14 3v5h5M8 12h8M8 16h8',
+};
+const Icon = ({ n, s = 18, sw = 1.7, className = '' }) => (
+  <svg className={className} width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={IP[n]} /></svg>
+);
+
+/* ---------- UI atoms ---------- */
+const Panel = ({ className = '', glow = false, children, ...r }) => <section className={`glass pad ${glow ? 'glow' : ''} ${className}`} {...r}>{children}</section>;
+const DemoTag = ({ text = 'Demo data' }) => <span className="demo-tag">{text}</span>;
+const Head = ({ title, sub, right, demo }) => (
+  <div className="flex items-start justify-between gap-3 mb-4">
+    <div className="min-w-0">
+      <h2 className="font-display text-[22px] leading-tight tracking-tight">{title}</h2>
+      {sub && <p className="text-[13px] text-[color:var(--muted)] mt-1 max-w-[56ch] leading-relaxed">{sub}</p>}
+    </div>
+    <div className="flex items-center gap-2 shrink-0">{demo && <DemoTag />}{right}</div>
+  </div>
+);
+const Btn = ({ v = 'ghost', sm = false, className = '', ...r }) => <button className={`btn btn-${v} ${sm ? 'btn-sm' : ''} ${className}`} {...r} />;
+const Chip = ({ on, ...r }) => <button className={`chip ${on ? 'chip-on' : ''}`} aria-pressed={!!on} {...r} />;
+const Switch = ({ on, set, label }) => <button type="button" role="switch" aria-checked={on} aria-label={label} className="sw" onClick={() => set(!on)} />;
+const Avatar = ({ name, size = 52 }) => (
+  <div className="rounded-full grid place-items-center font-display text-[color:var(--acc)] shrink-0" style={{ width: size, height: size, fontSize: size * 0.38, border: '1px solid rgba(var(--acc-rgb),.45)', background: 'rgba(var(--acc-rgb),.08)', boxShadow: '0 0 24px -8px rgba(var(--acc-rgb),.6)' }}>
+    {name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase()}
+  </div>
+);
+const Empty = ({ children }) => <div className="text-center text-[13.5px] text-[color:var(--muted)] py-10 px-4 border border-dashed border-[color:var(--line)] rounded-2xl">{children}</div>;
+/* =====================  DASHBOARD  ===================== */
+function Dashboard({ S }) {
+  const { profile, att, setAtt, thr, tasks, setTasks, events, setEvents, go, toast } = S;
+  const now = useNow();
+  const hr = now.getHours();
+  const greet = hr < 5 ? 'Still up' : hr < 12 ? 'Good morning' : hr < 17 ? 'Good afternoon' : 'Good evening';
+  const first = profile.name.split(' ')[0] || 'there';
+  const pending = tasks.filter(t => !t.done);
+  const soon = pending.filter(t => daysTo(t.due) <= 7).length;
+  const low = att.filter(a => pct(a) < thr);
+  const wd = now.getDay();
+  const weekend = wd === 0 || wd === 6;
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const cur = !weekend && TT.find(c => mins >= c.s && mins < c.e);
+  const nxt = !weekend && TT.find(c => c.s > mins);
+  const [newTask, setNewTask] = useState('');
+  const sortedTasks = [...tasks].sort((a, b) => (a.done - b.done) || (new Date(a.due) - new Date(b.due)));
+  const addTask = e => {
+    e.preventDefault();
+    if (!newTask.trim()) return;
+    setTasks([...tasks, { id: uid(), title: newTask.trim(), course: 'Personal', due: addDays(3), done: false }]);
+    setNewTask(''); toast('Task added, due in 3 days');
+  };
+  const mark = (id, d) => setAtt(att.map(a => a.id === id ? { ...a, att: a.att + (d === 'p' ? 1 : 0), tot: a.tot + 1 } : a));
+
+  const quick = [
+    { i: 'note', t: 'New note', f: () => go('studio', { newNote: true }) },
+    { i: 'map', t: 'Open campus map', f: () => go('explorer') },
+    { i: 'tag', t: 'Report lost item', f: () => go('community', { sub: 'lost', form: true }) },
+    { i: 'spark', t: 'Ask the assistant', f: () => go('assistant') },
+  ];
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-5">
+      <Panel glow className="lg:col-span-8 relative overflow-hidden">
+        <div className="absolute -right-24 -top-24 w-72 h-72 rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(var(--acc-rgb),.16), transparent 65%)' }} />
+        <p className="text-[13px] text-[color:var(--muted)] mb-3 relative">{now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+        <h1 className="font-display text-[38px] sm:text-[52px] leading-[1.02] tracking-[-0.02em] relative">{greet}, {first}.</h1>
+        <p className="mt-4 text-[15px] text-[color:var(--muted)] max-w-[52ch] leading-relaxed relative">
+          {soon === 0 ? 'Nothing is due this week.' : `${soon} ${soon === 1 ? 'task is' : 'tasks are'} due within a week`}
+          {low.length > 0 && `${soon === 0 ? ' But' : ', and'} ${low.length} ${low.length === 1 ? 'subject sits' : 'subjects sit'} below ${thr}% attendance`}
+          {soon === 0 && low.length === 0 ? ' Attendance is above the line everywhere. A good day to get ahead.' : '.'}
+        </p>
+        <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-2.5 relative">
+          {quick.map(q => (
+            <button key={q.t} onClick={q.f} className="inset text-left p-3.5 group cursor-pointer hover:!border-[color:rgba(var(--acc-rgb),.5)]">
+              <span className="text-[color:var(--acc)]"><Icon n={q.i} /></span>
+              <span className="block mt-3 text-[13.5px] font-semibold leading-tight">{q.t}</span>
+            </button>
+          ))}
+        </div>
+      </Panel>
+
+      <Panel className="lg:col-span-4">
+        <div className="flex items-center gap-3.5">
+          <Avatar name={profile.name} />
+          <div className="min-w-0">
+            <div className="font-display text-[20px] leading-tight truncate">{profile.name}</div>
+            <div className="text-[12.5px] text-[color:var(--muted)] truncate">{profile.roll}</div>
+          </div>
+        </div>
+        <dl className="mt-5 space-y-3 text-[13.5px]">
+          <div><dt className="text-[color:var(--dim)] text-[12px]">Branch</dt><dd>{profile.branch}</dd></div>
+          <div><dt className="text-[color:var(--dim)] text-[12px]">Year</dt><dd>{profile.year}</dd></div>
+          <div className="flex gap-8">
+            <div><dt className="text-[color:var(--dim)] text-[12px]">CGPA</dt><dd className="tnum font-display text-[22px] leading-none mt-0.5">{profile.cgpa}</dd></div>
+            <div><dt className="text-[color:var(--dim)] text-[12px]">Residence</dt><dd className="mt-0.5">{profile.hostel}</dd></div>
+          </div>
+        </dl>
+        <div className="mt-5 flex items-center justify-between">
+          <DemoTag text="Demo profile" />
+          <Btn v="quiet" sm onClick={() => go('profile')}>Edit profile</Btn>
+        </div>
+      </Panel>
+
+      <Panel className="lg:col-span-5">
+        <Head title={cur ? 'In class now' : 'Today’s classes'} sub={weekend ? 'It’s the weekend. Here is the weekday timetable for reference.' : undefined} demo />
+        <ol className="space-y-2">
+          {TT.map(c => {
+            const live = cur && cur.n === c.n;
+            const past = !weekend && mins >= c.e;
+            return (
+              <li key={c.n} className={`inset flex items-center gap-3.5 p-3 ${live ? 'inset-on' : ''} ${past ? 'opacity-45' : ''}`}>
+                <div className="tnum text-[13px] w-[86px] shrink-0 text-[color:var(--muted)]">{mm(c.s)} to {mm(c.e)}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-semibold truncate">{c.n}</div>
+                  <div className="text-[12px] text-[color:var(--muted)]">{c.r}</div>
+                </div>
+                {live && <span className="tag tag-acc">Now</span>}
+                {!live && nxt && nxt.n === c.n && <span className="tag">Next</span>}
+              </li>
+            );
+          })}
+        </ol>
+        {!weekend && !cur && !nxt && <p className="text-[13px] text-[color:var(--muted)] mt-3">Classes are done for today.</p>}
+      </Panel>
+
+      <Panel className="lg:col-span-7">
+        <Head title="Attendance" sub={`Marked against a ${thr}% requirement. Log today’s classes to keep the numbers honest.`} demo />
+        <ul className="space-y-3">
+          {att.map(a => {
+            const p = pct(a), sl = slack(a, thr);
+            const col = p >= thr + 5 ? 'var(--acc)' : p >= thr ? 'var(--warn)' : 'var(--bad)';
+            return (
+              <li key={a.id} className="inset p-3.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[14px] font-semibold truncate">{a.name}</div>
+                    <div className="text-[12px] text-[color:var(--muted)] tnum">{a.att} of {a.tot} classes</div>
+                  </div>
+                  <div className="font-display text-[22px] tnum" style={{ color: col }}>{p.toFixed(1)}%</div>
+                </div>
+                <div className="relative h-1.5 rounded-full bg-white/10 mt-3" role="img" aria-label={`${a.name}: ${p.toFixed(0)} percent`}>
+                  <div className="absolute inset-y-0 left-0 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, p)}%`, background: col }} />
+                  <div className="absolute -top-1 -bottom-1 w-px bg-white/60" style={{ left: `${thr}%` }} title={`${thr}% line`} />
+                </div>
+                <div className="flex items-center justify-between gap-2 mt-2.5">
+                  <p className="text-[12.5px] text-[color:var(--muted)]">
+                    {sl.ok ? (sl.n === 0 ? 'No room to miss a class.' : `You can miss ${sl.n} more ${sl.n === 1 ? 'class' : 'classes'}.`) : `Attend the next ${sl.n} in a row to reach ${thr}%.`}
+                  </p>
+                  <div className="flex gap-1.5 shrink-0">
+                    <Btn sm onClick={() => mark(a.id, 'p')} aria-label={`Log present for ${a.name}`}><Icon n="check" s={14} />Present</Btn>
+                    <Btn sm onClick={() => mark(a.id, 'a')} aria-label={`Log absent for ${a.name}`}><Icon n="minus" s={14} />Absent</Btn>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </Panel>
+
+      <Panel className="lg:col-span-6">
+        <Head title="Assignments" sub={`${pending.length} open`} demo />
+        <ul className="space-y-2">
+          {sortedTasks.map(t => {
+            const n = daysTo(t.due);
+            return (
+              <li key={t.id} className={`inset flex items-center gap-3 p-3 group ${t.done ? 'opacity-50' : ''}`}>
+                <button onClick={() => setTasks(tasks.map(x => x.id === t.id ? { ...x, done: !x.done } : x))} aria-label={t.done ? `Reopen ${t.title}` : `Complete ${t.title}`}
+                  className="w-[22px] h-[22px] rounded-md border grid place-items-center shrink-0 cursor-pointer transition-all"
+                  style={{ borderColor: t.done ? 'var(--acc)' : 'rgba(255,255,255,.25)', background: t.done ? 'var(--acc)' : 'transparent', color: '#0B0D0C' }}>
+                  {t.done && <Icon n="check" s={14} sw={2.6} />}
+                </button>
+                <div className="min-w-0 flex-1">
+                  <div className={`text-[14px] font-semibold truncate ${t.done ? 'line-through' : ''}`}>{t.title}</div>
+                  <div className="text-[12px] text-[color:var(--muted)] truncate">{t.course}</div>
+                </div>
+                <span className={`tag shrink-0 ${!t.done && n <= 0 ? 'tag-bad' : !t.done && n <= 2 ? 'tag-warn' : ''}`}>{t.done ? 'Done' : dueLabel(t.due)}</span>
+                <button onClick={() => setTasks(tasks.filter(x => x.id !== t.id))} aria-label={`Delete ${t.title}`} className="text-[color:var(--dim)] hover:text-[color:var(--bad)] cursor-pointer"><Icon n="x" s={16} /></button>
+              </li>
+            );
+          })}
+        </ul>
+        <form onSubmit={addTask} className="flex gap-2 mt-3">
+          <input className="field" placeholder="Add a task" value={newTask} onChange={e => setNewTask(e.target.value)} aria-label="New task" />
+          <Btn v="primary" type="submit"><Icon n="plus" s={16} />Add</Btn>
+        </form>
+      </Panel>
+
+      <Panel className="lg:col-span-6">
+        <Head title="Upcoming on campus" sub="Tap RSVP to mark yourself as going." demo />
+        <ul className="space-y-2">
+          {events.map(ev => {
+            const d = new Date(ev.when);
+            return (
+              <li key={ev.id} className={`inset flex items-center gap-3.5 p-3 ${ev.going ? 'inset-on' : ''}`}>
+                <div className="w-12 text-center shrink-0">
+                  <div className="font-display text-[26px] leading-none tnum">{d.getDate()}</div>
+                  <div className="text-[11.5px] text-[color:var(--muted)] mt-1">{d.toLocaleDateString('en-IN', { month: 'short' })}</div>
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-[14px] font-semibold truncate">{ev.title}</div>
+                  <div className="text-[12px] text-[color:var(--muted)] truncate">{ev.place}, {ev.time}, {ev.count + (ev.going ? 1 : 0)} going</div>
+                </div>
+                <Btn sm v={ev.going ? 'primary' : 'ghost'} onClick={() => { setEvents(events.map(x => x.id === ev.id ? { ...x, going: !x.going } : x)); toast(ev.going ? 'RSVP removed' : `You’re going to ${ev.title}`); }}>
+                  {ev.going ? <><Icon n="check" s={14} sw={2.4} />Going</> : 'RSVP'}
+                </Btn>
+              </li>
+            );
+          })}
+        </ul>
+      </Panel>
+    </div>
+  );
+}
+
+/* =====================  CAMPUS EXPLORER  ===================== */
+const BUILDINGS = [
+  { x: 225, y: 335, w: 70, h: 40, n: 'Admin block' },
+  { x: 365, y: 275, w: 80, h: 50, n: 'Central library' },
+  { x: 480, y: 205, w: 90, h: 55, n: 'Lecture hall complex' },
+  { x: 575, y: 310, w: 70, h: 38, n: 'Computer centre' },
+  { x: 205, y: 225, w: 64, h: 38, n: 'Food court' },
+  { x: 95, y: 115, w: 80, h: 45, n: 'Boys’ hostels' },
+  { x: 205, y: 80, w: 76, h: 42, n: 'Girls’ hostels' },
+  { x: 420, y: 385, w: 80, h: 45, n: 'Auditorium' },
+  { x: 115, y: 285, w: 56, h: 34, n: 'Health centre' },
+];
+const CONTOURS = Array.from({ length: 11 }, (_, i) => { const y = -20 + i * 55, a = 18 + ((i * 7) % 16); return `M-10 ${y + 20} C 140 ${y - a}, 250 ${y + a + 30}, 400 ${y + 10} S 640 ${y - a - 10}, 810 ${y + 30}`; });
+const ROADS = [
+  'M110 470 C 180 430, 220 400, 280 380 C 380 340, 450 320, 520 300 C 600 280, 680 220, 700 160',
+  'M302 374 C 302 335, 292 295, 287 268 C 282 230, 250 190, 218 128',
+  'M430 322 C 445 350, 455 380, 460 385',
+  'M520 295 C 560 305, 590 312, 610 312',
+];
+
+function CampusMap({ pins, selected, onSelect, drop, onDrop, draft, zoom }) {
+  const ref = useRef(null);
+  const W = 800, H = 520, vw = W / zoom, vh = H / zoom;
+  const sel = pins.find(p => p.id === selected);
+  const cx = sel && zoom > 1 ? sel.x : W / 2, cy = sel && zoom > 1 ? sel.y : H / 2;
+  const vx = Math.min(Math.max(cx - vw / 2, 0), W - vw), vy = Math.min(Math.max(cy - vh / 2, 0), H - vh);
+  const click = e => {
+    if (!drop) return;
+    const svg = ref.current, pt = svg.createSVGPoint();
+    pt.x = e.clientX; pt.y = e.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    onDrop({ x: Math.round(p.x), y: Math.round(p.y) });
+  };
+  return (
+    <svg ref={ref} viewBox={`${vx} ${vy} ${vw} ${vh}`} className={`w-full h-auto rounded-[16px] block ${drop ? 'dropping' : ''}`} style={{ background: '#0E1210', border: '1px solid var(--line)' }} onClick={click} role="group" aria-label="Illustrative campus map with memory pins">
+      <defs>
+        <radialGradient id="hill" cx="50%" cy="50%" r="50%"><stop offset="0" stopColor="#C8FF45" stopOpacity=".10" /><stop offset="1" stopColor="#C8FF45" stopOpacity="0" /></radialGradient>
+      </defs>
+      <ellipse cx="725" cy="440" rx="130" ry="85" fill="url(#hill)" />
+      {CONTOURS.map((d, i) => <path key={i} d={d} fill="none" stroke="rgba(255,255,255,.055)" strokeWidth="1" />)}
+      {[70, 48, 26].map(r => <ellipse key={r} cx="725" cy="440" rx={r} ry={r * 0.58} fill="none" stroke="rgba(255,255,255,.09)" />)}
+      {ROADS.map((d, i) => (
+        <g key={i} fill="none" strokeLinecap="round">
+          <path d={d} stroke="rgba(255,255,255,.06)" strokeWidth="15" />
+          <path d={d} stroke="#171B19" strokeWidth="12" />
+          <path d={d} className="s-acc" strokeOpacity=".28" strokeWidth="1" strokeDasharray="4 7" />
+        </g>
+      ))}
+      <ellipse cx="650" cy="120" rx="82" ry="50" fill="rgba(255,255,255,.03)" stroke="rgba(255,255,255,.14)" />
+      <ellipse cx="650" cy="120" rx="58" ry="32" fill="none" stroke="rgba(255,255,255,.1)" />
+      <line x1="650" y1="88" x2="650" y2="152" stroke="rgba(255,255,255,.1)" />
+      <text x="650" y="186" textAnchor="middle" fontSize="10" fill="#7C857E">Sports ground</text>
+      <text x="725" y="486" textAnchor="middle" fontSize="10" fill="#7C857E">Sunset point</text>
+      <text x="110" y="494" textAnchor="middle" fontSize="10" fill="#7C857E">Main gate</text>
+      {BUILDINGS.map(b => (
+        <g key={b.n}>
+          <rect x={b.x} y={b.y} width={b.w} height={b.h} rx="7" fill="rgba(255,255,255,.045)" stroke="rgba(255,255,255,.15)" />
+          <text x={b.x + b.w / 2} y={b.y + b.h + 14} textAnchor="middle" fontSize="10" fill="#7C857E">{b.n}</text>
+        </g>
+      ))}
+      {draft && (
+        <g transform={`translate(${draft.x} ${draft.y})`}>
+          <circle r="12" fill="none" className="s-acc" strokeDasharray="3 3" />
+          <circle r="4" className="f-acc" />
+        </g>
+      )}
+      {pins.map(p => {
+        const on = p.id === selected;
+        return (
+          <g key={p.id} className="pin" transform={`translate(${p.x} ${p.y})`} role="button" tabIndex={0} aria-label={`${p.title}, ${p.cat} memory`} aria-pressed={on}
+            onClick={e => { e.stopPropagation(); if (!drop) onSelect(p.id); }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(p.id); } }}>
+            {on && <circle r="12" className="f-acc pulse" fillOpacity=".35" />}
+            <circle r="17" fill="transparent" className="ring" />
+            <circle r={on ? 8 : 6.5} className={`dot ${on ? 'f-acc' : ''}`} fill={on ? undefined : '#0B0D0C'} stroke="rgb(var(--acc-rgb))" strokeWidth="2" />
+            {on && (
+              <g transform="translate(0 -22)">
+                <rect x={-(p.title.length * 3.1 + 10)} y="-12" width={p.title.length * 6.2 + 20} height="22" rx="11" fill="#0B0D0C" stroke="rgba(var(--acc-rgb),.6)" />
+                <text y="3" textAnchor="middle" fontSize="11" fill="#ECEFEA" fontWeight="600">{p.title}</text>
+              </g>
+            )}
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/* =====================  CAMPUS EXPLORER (real map + sketch fallback)  ===================== */
+/* Only coordinate used as "known": India Post record for "NIT Hamirpur SO" (31.7083, 76.5273).
+   It marks the campus area. No building coordinates are included because none were verified. */
+const CAMPUS = { lat: 31.7083, lng: 76.5273 };
+const OSM_FULL = `https://www.openstreetmap.org/?mlat=${CAMPUS.lat}&mlon=${CAMPUS.lng}#map=16/${CAMPUS.lat}/${CAMPUS.lng}`;
+const GMAPS_FULL = `https://www.google.com/maps/search/?api=1&query=${CAMPUS.lat},${CAMPUS.lng}`;
+const osmPin = (lat, lng) => `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=19/${lat}/${lng}`;
+
+const mkIcon = (kind, on) => window.L.divIcon({ className: '', html: `<div class="mk mk-${kind} ${on ? 'mk-on' : ''}"><i></i></div>`, iconSize: [28, 28], iconAnchor: [14, 14] });
+
+function RealMap({ pins, selected, onSelect, picking, onPick, draft, onStatus, recenter }) {
+  const el = useRef(null);
+  const st = useRef({});
+  const cb = useRef({});
+  cb.current = { onSelect, onPick, picking, onStatus };
+
+  useEffect(() => {
+    const L = window.L;
+    if (!L || !el.current) { cb.current.onStatus('nolib'); return; }
+    let m;
+    try { m = L.map(el.current, { center: [CAMPUS.lat, CAMPUS.lng], zoom: 16, minZoom: 5, maxZoom: 19 }); }
+    catch (e) { cb.current.onStatus('nolib'); return; }
+    // Try OpenStreetMap first, then fall back to CARTO if OSM tiles are blocked.
+    // Keep attribution visible for whichever tile source is active.
+    let loaded = 0, errors = 0, fallbackTried = false;
+    let tiles = null;
+    const osmAttribution = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors';
+    const fallbackAttribution = 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ';
+    const markLoaded = () => { loaded++; cb.current.onStatus('ok'); };
+    const startFallback = () => {
+      if (fallbackTried || loaded > 0) return;
+      fallbackTried = true;
+      errors = 0;
+      if (tiles) { tiles.off(); m.removeLayer(tiles); }
+      tiles = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19, attribution: fallbackAttribution,
+      }).addTo(m);
+      tiles.on('tileload', markLoaded);
+      tiles.on('tileerror', () => { errors++; if (!loaded && errors >= 5) cb.current.onStatus('failed'); });
+    };
+    tiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: osmAttribution,
+    }).addTo(m);
+    tiles.on('tileload', markLoaded);
+    tiles.on('tileerror', () => { errors++; if (!loaded && errors >= 3) startFallback(); });
+    const timer = setTimeout(() => { if (!loaded) { if (!fallbackTried) { startFallback(); setTimeout(() => { if (!loaded) cb.current.onStatus('failed'); }, 7000); } else cb.current.onStatus('failed'); } }, 9000);
+    m.on('click', e => { if (cb.current.picking) cb.current.onPick({ lat: +e.latlng.lat.toFixed(6), lng: +e.latlng.lng.toFixed(6) }); });
+    const ref = L.marker([CAMPUS.lat, CAMPUS.lng], { icon: mkIcon('ref', false), title: 'NIT Hamirpur campus reference point', keyboard: true })
+      .addTo(m).on('click', () => cb.current.onSelect('ref'));
+    st.current = { m, ref, markers: {}, draft: null };
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(() => m.invalidateSize()) : null;
+    if (ro) ro.observe(el.current);
+    return () => { clearTimeout(timer); if (ro) ro.disconnect(); m.remove(); st.current = {}; };
+  }, []);
+
+  useEffect(() => {
+    const s = st.current; if (!s.m) return;
+    const L = window.L, seen = new Set();
+    pins.filter(p => p.lat != null).forEach(p => {
+      seen.add(p.id);
+      const icon = mkIcon('pin', p.id === selected);
+      if (!s.markers[p.id]) s.markers[p.id] = L.marker([p.lat, p.lng], { icon, title: p.title, keyboard: true }).addTo(s.m).on('click', () => cb.current.onSelect(p.id));
+      else { s.markers[p.id].setLatLng([p.lat, p.lng]); s.markers[p.id].setIcon(icon); }
+    });
+    Object.keys(s.markers).forEach(id => { if (!seen.has(id)) { s.markers[id].remove(); delete s.markers[id]; } });
+    s.ref.setIcon(mkIcon('ref', selected === 'ref'));
+  }, [pins, selected]);
+
+  useEffect(() => {
+    const s = st.current; if (!s.m) return;
+    const L = window.L;
+    if (s.draft) { s.draft.remove(); s.draft = null; }
+    if (draft && draft.lat != null) s.draft = L.marker([draft.lat, draft.lng], { icon: mkIcon('draft', false), interactive: false }).addTo(s.m);
+  }, [draft]);
+
+  useEffect(() => {
+    const s = st.current; if (!s.m) return;
+    s.m.getContainer().classList.toggle('leaflet-crosshair', !!picking);
+  }, [picking]);
+
+  useEffect(() => {
+    const s = st.current; if (!s.m) return;
+    if (selected === 'ref') s.m.panTo([CAMPUS.lat, CAMPUS.lng]);
+    else if (s.markers[selected]) s.m.panTo(s.markers[selected].getLatLng());
+  }, [selected]);
+
+  useEffect(() => {
+    const s = st.current; if (!s.m || !recenter) return;
+    s.m.setView([CAMPUS.lat, CAMPUS.lng], 16);
+  }, [recenter]);
+
+  return <div ref={el} className="map-wrap map-dark w-full rounded-[16px]" style={{ border: '1px solid var(--line)' }} role="application" aria-label="Interactive map of the NIT Hamirpur area. Use the zoom buttons or drag to move." />;
+}
+
+const Legend = ({ real }) => (
+  <ul className="flex flex-wrap gap-x-5 gap-y-2 text-[12.5px] text-[color:var(--muted)]" aria-label="Map legend">
+    {real ? (<>
+      <li className="inline-flex items-center gap-2.5"><span className="lg lg-ref" />Campus reference point (India Post record)</li>
+      <li className="inline-flex items-center gap-2.5"><span className="lg lg-pin" />Memory pin placed by you</li>
+      <li className="inline-flex items-center gap-2.5"><span className="lg lg-draft" />Pin being placed</li>
+    </>) : (<>
+      <li className="inline-flex items-center gap-2.5"><span className="lg lg-pin" />Memory pin (invented sketch position)</li>
+      <li className="inline-flex items-center gap-2.5"><span className="lg lg-draft" />Pin being placed</li>
+    </>)}
+  </ul>
+);
+
+const ExtLink = ({ href, children }) => <a className="btn btn-ghost btn-sm" href={href} target="_blank" rel="noopener noreferrer">{children}</a>;
+
+function Explorer({ S }) {
+  const { pins, setPins, profile, toast } = S;
+  const [view, setView] = useState('real');
+  const [status, setStatus] = useState('loading');
+  const [mapKey, setMapKey] = useState(0);
+  const [recenter, setRecenter] = useState(0);
+  const [cat, setCat] = useState('All');
+  const [sel, setSel] = useState('ref');
+  const [zoom, setZoom] = useState(1);
+  const [picking, setPicking] = useState(null); // null | 'drop' | { place: pinId }
+  const [draft, setDraft] = useState(null);
+  const [form, setForm] = useState({ title: '', memory: '', cat: 'Spots' });
+  const real = view === 'real';
+  const dropping = picking === 'drop';
+  const placing = picking && picking.place ? pins.find(p => p.id === picking.place) : null;
+  const visible = pins.filter(p => (cat === 'All' || p.cat === cat) && (real || p.x != null));
+  const cur = visible.find(p => p.id === sel);
+  const showRef = real && sel === 'ref';
+  const mapProblem = real && (status === 'failed' || status === 'nolib');
+
+  const switchView = v => {
+    setView(v); setPicking(null); setDraft(null);
+    if (v === 'real') { setStatus('loading'); setSel('ref'); }
+    else { const f = pins.find(p => p.x != null); setSel(f ? f.id : null); }
+  };
+  const onPick = ll => {
+    if (picking === 'drop') setDraft(ll);
+    else if (picking && picking.place) {
+      setPins(pins.map(p => (p.id === picking.place ? { ...p, lat: ll.lat, lng: ll.lng } : p)));
+      setSel(picking.place); setPicking(null);
+      toast('Pin placed where you clicked. That position comes from you and isn’t verified');
+    }
+  };
+  const save = e => {
+    e.preventDefault();
+    const ok = real ? draft && draft.lat != null : draft && draft.x != null;
+    if (!ok) return toast('Click the map to place the pin first');
+    if (!form.title.trim() || !form.memory.trim()) return toast('Add a title and a memory');
+    const id = 'u' + uid();
+    const base = { id, cat: form.cat, title: form.title.trim(), memory: form.memory.trim(), by: `${profile.name} (you)`, likes: 0, liked: false, mine: true };
+    setPins([...pins, real ? { ...base, lat: draft.lat, lng: draft.lng } : { ...base, x: draft.x, y: draft.y }]);
+    setSel(id); setCat('All'); setDraft(null); setPicking(null); setForm({ title: '', memory: '', cat: 'Spots' });
+    toast('Memory pinned. It’s stored in this browser only');
+  };
+  const startPlace = p => { if (!real) { setView('real'); setStatus('loading'); } setDraft(null); setPicking({ place: p.id }); setSel(p.id); };
+
+  const statusTag = !real ? <span className="tag">Illustrative sketch</span>
+    : status === 'ok' ? <span className="tag tag-acc">OpenStreetMap tiles loaded</span>
+    : status === 'loading' ? <span className="tag">Loading map tiles</span>
+    : <span className="tag tag-warn">Map tiles unavailable</span>;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_350px] gap-4 lg:gap-5">
+      <Panel>
+        <Head title="Memories on the map"
+          sub={real ? 'A real OpenStreetMap view centred on NIT Hamirpur. Only the campus reference point is pre-marked; you place your own memory pins.' : 'The old hand-drawn sketch, kept as an offline fallback. Its layout and pin positions are invented for the demo.'}
+          right={statusTag} />
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          <div className="flex gap-2" role="group" aria-label="Map type">
+            <Chip on={real} onClick={() => switchView('real')}>Real map</Chip>
+            <Chip on={!real} onClick={() => switchView('sketch')}>Sketch</Chip>
+          </div>
+          <div className="hscroll flex gap-2 flex-1 min-w-0 pb-1">
+            {['All', ...PIN_CATS].map(c => <Chip key={c} on={cat === c} onClick={() => setCat(c)}>{c}</Chip>)}
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 mb-3">
+          {real ? <Btn sm onClick={() => { setRecenter(r => r + 1); setSel('ref'); }}><Icon n="pin" s={14} />Recenter on campus</Btn> : (<>
+            <Btn sm onClick={() => setZoom(z => Math.max(1, +(z - 0.5).toFixed(1)))} aria-label="Zoom out" disabled={zoom <= 1}><Icon n="minus" s={14} /></Btn>
+            <Btn sm onClick={() => setZoom(z => Math.min(2.5, +(z + 0.5).toFixed(1)))} aria-label="Zoom in" disabled={zoom >= 2.5}><Icon n="plus" s={14} /></Btn>
+          </>)}
+          <Btn sm v={dropping ? 'primary' : 'ghost'} onClick={() => { setPicking(dropping ? null : 'drop'); setDraft(null); }}><Icon n="pin" s={14} />{dropping ? 'Cancel' : 'Drop a memory'}</Btn>
+          <span className="flex-1" />
+          <ExtLink href={OSM_FULL}>Open in OpenStreetMap</ExtLink>
+          <ExtLink href={GMAPS_FULL}>Open in Google Maps</ExtLink>
+        </div>
+
+        {mapProblem && (
+          <div className="inset p-4 mb-3 view" style={{ borderColor: 'rgba(255,180,84,.4)' }} role="alert">
+            <div className="text-[14px] font-semibold text-[color:var(--warn)]">{status === 'nolib' ? 'The map library didn’t load' : 'Map tiles couldn’t load'}</div>
+            <p className="text-[13px] text-[color:var(--muted)] mt-1.5 leading-relaxed">
+              {status === 'nolib' ? 'The mapping script was blocked or you’re offline.' : 'The page can’t reach OpenStreetMap’s tile server. You may be offline, or this host may block outside images.'} The full map links above still work, and the sketch is available as a fallback.
+            </p>
+            <div className="flex flex-wrap gap-2 mt-3">
+              <Btn sm onClick={() => { setStatus('loading'); setMapKey(k => k + 1); }}>Try again</Btn>
+              <Btn sm v="primary" onClick={() => switchView('sketch')}>Use the sketch</Btn>
+            </div>
+          </div>
+        )}
+        {dropping && <p className="text-[13px] mb-3 text-[color:var(--acc)]">Click the map where the memory happened, then fill in the form.</p>}
+        {placing && <p className="text-[13px] mb-3 text-[color:var(--acc)]">Click the map to place “{placing.title}”. <button className="underline cursor-pointer" onClick={() => setPicking(null)}>Cancel</button></p>}
+
+        {real
+          ? <RealMap key={mapKey} pins={visible} selected={sel} onSelect={id => { if (!picking) setSel(id); }} picking={picking} onPick={onPick} draft={draft} onStatus={setStatus} recenter={recenter} />
+          : <CampusMap pins={visible} selected={cur ? cur.id : null} onSelect={setSel} drop={dropping} draft={draft} zoom={zoom} onDrop={p => setDraft(p)} />}
+
+        <div className="mt-4"><Legend real={real} /></div>
+        <p className="text-[12px] text-[color:var(--dim)] mt-3 leading-relaxed">
+          {real ? 'No individual buildings are labelled because their positions haven’t been verified. The reference point comes from India Post’s record for the NIT Hamirpur post office and marks the campus area, not a particular building.' : 'Layout, building names and distances in this sketch are made up for the demo and don’t match the real campus.'}
+        </p>
+      </Panel>
+
+      <div className="space-y-4 lg:space-y-5 min-w-0">
+        {dropping ? (
+          <Panel glow>
+            <Head title="New memory pin" sub={draft ? 'Position set. Describe the memory.' : 'Waiting for you to click the map.'} />
+            <form onSubmit={save} className="space-y-3">
+              <div><label className="lbl" htmlFor="pt">Title</label><input id="pt" className="field" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Where was it?" maxLength={44} /></div>
+              <div><label className="lbl" htmlFor="pc">Category</label><select id="pc" className="field" value={form.cat} onChange={e => setForm({ ...form, cat: e.target.value })}>{PIN_CATS.map(c => <option key={c}>{c}</option>)}</select></div>
+              <div><label className="lbl" htmlFor="pm">Memory</label><textarea id="pm" rows={4} className="field" value={form.memory} onChange={e => setForm({ ...form, memory: e.target.value })} placeholder="What happened here?" maxLength={240} /></div>
+              <Btn v="primary" type="submit" className="w-full">Save pin</Btn>
+            </form>
+          </Panel>
+        ) : showRef ? (
+          <Panel glow key="ref" className="view">
+            <div className="flex items-center gap-2 mb-3"><span className="tag tag-acc">Reference point</span></div>
+            <h3 className="font-display text-[26px] leading-tight tracking-tight">NIT Hamirpur campus area</h3>
+            <p className="mt-3 text-[14px] leading-[1.7] text-[#D5DAD3]">Position taken from India Post’s record for the NIT Hamirpur post office: <span className="tnum">{CAMPUS.lat}, {CAMPUS.lng}</span>. It marks the campus area only. It is not a specific building, gate or department.</p>
+            <p className="mt-3 text-[12.5px] text-[color:var(--muted)] leading-relaxed">Zoom in on the map and drop your own pins for the places you know. Check them against the real campus before relying on them.</p>
+            <div className="flex flex-wrap gap-2 mt-4"><ExtLink href={OSM_FULL}>OpenStreetMap</ExtLink><ExtLink href={GMAPS_FULL}>Google Maps</ExtLink></div>
+          </Panel>
+        ) : cur ? (
+          <Panel glow key={cur.id} className="view">
+            <div className="flex items-center gap-2 mb-3"><span className="tag tag-acc">{cur.cat}</span>{cur.mine ? <span className="tag">Yours</span> : <DemoTag />}</div>
+            <h3 className="font-display text-[26px] leading-tight tracking-tight">{cur.title}</h3>
+            <p className="mt-3 text-[14.5px] leading-[1.7] text-[#D5DAD3]">{cur.memory}</p>
+            <p className="mt-3 text-[12.5px] text-[color:var(--muted)]">Pinned by {cur.by}</p>
+            <p className="mt-1.5 text-[12.5px] text-[color:var(--muted)] leading-relaxed">
+              {cur.lat != null ? <>Placed by you at <span className="tnum">{cur.lat.toFixed(5)}, {cur.lng.toFixed(5)}</span>. Not independently verified.</> : cur.x != null ? 'Sketch position only, so it isn’t on the real map yet.' : ''}
+            </p>
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              <Btn v={cur.liked ? 'primary' : 'ghost'} sm onClick={() => setPins(pins.map(p => p.id === cur.id ? { ...p, liked: !p.liked, likes: p.likes + (p.liked ? -1 : 1) } : p))}>
+                <Icon n="heart" s={14} />{cur.liked ? 'I remember this too' : 'I remember this'} <span className="tnum">{cur.likes}</span>
+              </Btn>
+              <Btn sm onClick={() => startPlace(cur)}><Icon n="pin" s={14} />{cur.lat != null ? 'Move on real map' : 'Place on real map'}</Btn>
+              {cur.lat != null && <ExtLink href={osmPin(cur.lat, cur.lng)}>Open in OSM</ExtLink>}
+              {cur.mine && <Btn sm v="quiet" onClick={() => { setPins(pins.filter(p => p.id !== cur.id)); setSel(real ? 'ref' : null); toast('Pin removed'); }}><Icon n="trash" s={14} />Remove</Btn>}
+            </div>
+          </Panel>
+        ) : (
+          <Panel><Empty>No pin selected. Choose one on the map or from the list.</Empty></Panel>
+        )}
+        <Panel>
+          <Head title="All pins" sub={`${visible.length} shown`} />
+          <ul className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
+            {real && (
+              <li><button onClick={() => { setSel('ref'); setPicking(null); }} className={`inset w-full text-left px-3 py-2.5 flex items-center gap-3 cursor-pointer ${showRef ? 'inset-on' : ''}`}>
+                <span className="lg lg-ref ml-1 mr-1" /><span className="min-w-0 flex-1"><span className="block text-[13.5px] font-semibold truncate">Campus reference point</span><span className="block text-[12px] text-[color:var(--muted)]">India Post record</span></span>
+              </button></li>
+            )}
+            {visible.map(p => (
+              <li key={p.id}>
+                <button onClick={() => { setSel(p.id); setPicking(null); }} className={`inset w-full text-left px-3 py-2.5 flex items-center gap-3 cursor-pointer ${p.id === (cur && cur.id) && !showRef ? 'inset-on' : ''}`}>
+                  <span className="text-[color:var(--acc)]"><Icon n="pin" s={16} /></span>
+                  <span className="min-w-0 flex-1"><span className="block text-[13.5px] font-semibold truncate">{p.title}</span><span className="block text-[12px] text-[color:var(--muted)]">{p.cat}, {p.lat != null ? 'on real map' : 'sketch only'}</span></span>
+                  <span className="text-[12px] text-[color:var(--muted)] tnum">{p.likes}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+/* =====================  STUDY STUDIO  ===================== */
+function Flash({ cs }) {
+  const [i, setI] = useState(0);
+  const [f, setF] = useState(false);
+  const [known, setKnown] = useState({});
+  const [order, setOrder] = useState(null);
+  const list = order ? order.map(k => cs[k]).filter(Boolean) : cs;
+  const n = list.length;
+  if (!n) return <Empty>No flashcards yet. Add lines written as “Term: definition” to your note and cards appear here.</Empty>;
+  const idx = Math.min(i, n - 1), c = list[idx];
+  const go = d => { setF(false); setI((idx + d + n) % n); };
+  const kc = list.filter(x => known[x.q]).length;
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3 text-[13px] text-[color:var(--muted)]">
+        <span className="tnum">Card {idx + 1} of {n}</span>
+        <span className="tnum">{kc} of {n} marked known</span>
+      </div>
+      <div className={`flip ${f ? 'flip-on' : ''} h-[230px] cursor-pointer`} onClick={() => setF(!f)} role="button" tabIndex={0} aria-label={f ? 'Showing answer. Press to see the term' : 'Showing term. Press to see the answer'}
+        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setF(!f); } }}>
+        <div className="flip-inner">
+          <div className="face inset" style={{ background: 'rgba(255,255,255,.05)' }}>
+            <span className="text-[12px] text-[color:var(--muted)] mb-3">Term</span>
+            <div className="font-display text-[26px] leading-tight">{c.q}</div>
+            <span className="text-[12px] text-[color:var(--dim)] mt-5">Tap to reveal</span>
+          </div>
+          <div className="face face-back" style={{ background: 'rgba(var(--acc-rgb),.07)', border: '1px solid rgba(var(--acc-rgb),.4)' }}>
+            <span className="text-[12px] text-[color:var(--acc)] mb-3">Definition</span>
+            <div className="text-[15.5px] leading-[1.65]">{c.a}</div>
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 mt-4">
+        <div className="flex gap-2">
+          <Btn sm onClick={() => go(-1)}>Previous</Btn>
+          <Btn sm onClick={() => go(1)}>Next</Btn>
+        </div>
+        <div className="flex gap-2">
+          <Btn sm onClick={() => { setKnown({ ...known, [c.q]: false }); go(1); }}>Review again</Btn>
+          <Btn sm v="primary" onClick={() => { setKnown({ ...known, [c.q]: true }); go(1); }}><Icon n="check" s={14} sw={2.4} />Got it</Btn>
+        </div>
+      </div>
+      <div className="mt-3"><Btn v="quiet" sm onClick={() => { const o = cs.map((_, k) => k).sort(() => Math.random() - 0.5); setOrder(o); setI(0); setF(false); }}><Icon n="shuffle" s={14} />Shuffle</Btn>
+        {order && <Btn v="quiet" sm onClick={() => { setOrder(null); setI(0); setF(false); }}>Original order</Btn>}</div>
+    </div>
+  );
+}
+
+function Quiz({ qs }) {
+  const [open, setOpen] = useState({});
+  if (!qs.length) return <Empty>Write a few full sentences or “Term: definition” lines and practice questions will be generated here.</Empty>;
+  return (
+    <ul className="space-y-2.5">
+      {qs.map((q, k) => (
+        <li key={k} className="inset p-3.5">
+          <span className="tag mb-2">{q.k}</span>
+          <p className="text-[14px] leading-relaxed">{q.q}</p>
+          <button className="mt-2 text-[13px] font-semibold text-[color:var(--acc)] cursor-pointer" onClick={() => setOpen({ ...open, [k]: !open[k] })}>{open[k] ? 'Hide answer' : 'Show answer'}</button>
+          {open[k] && <p className="mt-2 text-[13.5px] text-[#C9CEC7] leading-relaxed border-l-2 pl-3" style={{ borderColor: 'rgba(var(--acc-rgb),.5)' }}>{q.a}</p>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Studio({ S }) {
+  const { notes, setNotes, toast, intent, clearIntent } = S;
+  const [aid, setAid] = useState(notes[0] ? notes[0].id : null);
+  const [tool, setTool] = useState('summary');
+  const note = notes.find(n => n.id === aid) || notes[0];
+  useEffect(() => {
+    if (intent && intent.newNote) { addNote(); clearIntent(); }
+  }, [intent]);
+  function addNote() {
+    const n = { id: uid(), title: 'Untitled note', body: '' };
+    setNotes(ns => [n, ...ns]); setAid(n.id);
+  }
+  const upd = patch => setNotes(notes.map(n => (n.id === note.id ? { ...n, ...patch } : n)));
+  const body = note ? note.body : '';
+  const sum = useMemo(() => summarize(body, 3), [body]);
+  const terms = useMemo(() => keyTerms(body, 7), [body]);
+  const cs = useMemo(() => cardsOf(body), [body]);
+  const qs = useMemo(() => questionsOf(body), [body]);
+  const wc = (body.match(/\S+/g) || []).length;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[230px_minmax(0,1fr)_minmax(0,1.05fr)] gap-4 lg:gap-5">
+      <Panel className="lg:self-start">
+        <Head title="Notes" right={<Btn sm v="primary" onClick={addNote}><Icon n="plus" s={14} />New</Btn>} />
+        <ul className="hscroll flex lg:block gap-2 lg:space-y-1.5 pb-1 lg:pb-0">
+          {notes.map(n => (
+            <li key={n.id} className="shrink-0 w-[200px] lg:w-auto">
+              <button onClick={() => setAid(n.id)} className={`inset w-full text-left px-3 py-2.5 cursor-pointer ${note && n.id === note.id ? 'inset-on' : ''}`}>
+                <span className="block text-[13.5px] font-semibold truncate">{n.title || 'Untitled'}</span>
+                <span className="block text-[12px] text-[color:var(--muted)] tnum">{(n.body.match(/\S+/g) || []).length} words</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div className="mt-3"><DemoTag text="Sample notes" /></div>
+      </Panel>
+
+      {note ? (
+        <Panel>
+          <div className="flex items-center gap-2 mb-3">
+            <input className="field !bg-transparent !border-transparent !px-0 font-display text-[22px] tracking-tight" value={note.title} onChange={e => upd({ title: e.target.value })} aria-label="Note title" placeholder="Note title" />
+            <Btn v="quiet" sm aria-label="Delete note" onClick={() => { const rest = notes.filter(n => n.id !== note.id); setNotes(rest); setAid(rest[0] ? rest[0].id : null); toast('Note deleted'); }}><Icon n="trash" s={16} /></Btn>
+          </div>
+          <textarea className="field text-[14.5px]" rows={16} value={note.body} onChange={e => upd({ body: e.target.value })} aria-label="Note body"
+            placeholder={'Write notes here.\nTip: lines written as “Term: definition” turn into flashcards.'} />
+          <div className="flex flex-wrap justify-between gap-2 mt-3 text-[12.5px] text-[color:var(--muted)] tnum">
+            <span>{wc} words, about {Math.max(1, Math.round(wc / 200))} min read</span>
+            <span>{cs.length} cards, {qs.length} questions, saved in this browser</span>
+          </div>
+        </Panel>
+      ) : (
+        <Panel><Empty>No notes yet. Create one to start.</Empty></Panel>
+      )}
+
+      <Panel glow className="lg:self-start">
+        <div className="flex gap-2 mb-4 hscroll">
+          {[['summary', 'Summary'], ['cards', 'Flashcards'], ['quiz', 'Questions']].map(([k, l]) => <Chip key={k} on={tool === k} onClick={() => setTool(k)}>{l}</Chip>)}
+        </div>
+        {!note ? <Empty>Pick or create a note first.</Empty> : tool === 'summary' ? (
+          <div>
+            <Head title="Quick summary" sub="Picks the most information-dense sentences using word frequency. It runs in your browser and is not an AI model, so skim it as a revision aid, not a replacement for reading." />
+            {sum.length ? (
+              <ul className="space-y-2.5">
+                {sum.map((s, k) => <li key={k} className="flex gap-3 text-[14px] leading-relaxed"><span className="mt-2 w-1.5 h-1.5 rounded-full bg-[color:var(--acc)] shrink-0" />{s}</li>)}
+              </ul>
+            ) : <Empty>Write at least a couple of full sentences to get a summary.</Empty>}
+            {terms.length > 0 && <div className="mt-5"><div className="text-[12.5px] text-[color:var(--muted)] mb-2">Most repeated terms</div><div className="flex flex-wrap gap-2">{terms.map(t => <span key={t} className="tag tag-acc">{t}</span>)}</div></div>}
+          </div>
+        ) : tool === 'cards' ? <Flash key={note.id} cs={cs} /> : <Quiz key={note.id} qs={qs} />}
+      </Panel>
+    </div>
+  );
+}
+
+/* =====================  COMMUNITY  ===================== */
+function Discussions({ S }) {
+  const { threads, setThreads, profile, toast } = S;
+  const [open, setOpen] = useState('d1');
+  const [tag, setTag] = useState('All');
+  const [show, setShow] = useState(false);
+  const [f, setF] = useState({ title: '', body: '', tag: 'Academics' });
+  const [reply, setReply] = useState({});
+  const TAGS = ['Academics', 'Campus life', 'Events', 'Placements'];
+  const list = threads.filter(t => tag === 'All' || t.tag === tag);
+  const post = e => {
+    e.preventDefault();
+    if (!f.title.trim()) return toast('Give your thread a title');
+    setThreads([{ id: uid(), tag: f.tag, title: f.title.trim(), body: f.body.trim(), author: `${profile.name} (you)`, time: 'Just now', votes: 0, voted: false, replies: [] }, ...threads]);
+    setF({ title: '', body: '', tag: 'Academics' }); setShow(false); toast('Thread posted locally');
+  };
+  const sendReply = (id, e) => {
+    e.preventDefault();
+    const t = (reply[id] || '').trim(); if (!t) return;
+    setThreads(threads.map(x => x.id === id ? { ...x, replies: [...x.replies, { id: uid(), author: `${profile.name} (you)`, text: t }] } : x));
+    setReply({ ...reply, [id]: '' });
+  };
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2 items-center justify-between">
+        <div className="hscroll flex gap-2">{['All', ...TAGS].map(t => <Chip key={t} on={tag === t} onClick={() => setTag(t)}>{t}</Chip>)}</div>
+        <Btn v="primary" onClick={() => setShow(!show)}><Icon n={show ? 'x' : 'plus'} s={16} />{show ? 'Close' : 'Start a thread'}</Btn>
+      </div>
+      {show && (
+        <Panel glow className="view">
+          <form onSubmit={post} className="space-y-3">
+            <div><label className="lbl" htmlFor="dt">Title</label><input id="dt" className="field" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} placeholder="What do you want to ask or share?" /></div>
+            <div><label className="lbl" htmlFor="db">Details</label><textarea id="db" className="field" rows={3} value={f.body} onChange={e => setF({ ...f, body: e.target.value })} /></div>
+            <div className="flex flex-wrap gap-3 items-end">
+              <div className="w-48"><label className="lbl" htmlFor="dg">Topic</label><select id="dg" className="field" value={f.tag} onChange={e => setF({ ...f, tag: e.target.value })}>{TAGS.map(t => <option key={t}>{t}</option>)}</select></div>
+              <Btn v="primary" type="submit">Post thread</Btn>
+            </div>
+          </form>
+        </Panel>
+      )}
+      {list.length === 0 && <Empty>No threads under this topic yet. Start one.</Empty>}
+      <ul className="space-y-3">
+        {list.map(t => {
+          const on = open === t.id;
+          return (
+            <li key={t.id}>
+              <Panel className={on ? 'glow' : ''}>
+                <div className="flex gap-4">
+                  <button onClick={() => setThreads(threads.map(x => x.id === t.id ? { ...x, voted: !x.voted, votes: x.votes + (x.voted ? -1 : 1) } : x))} aria-label={`Upvote, ${t.votes} votes`} aria-pressed={t.voted}
+                    className={`inset flex flex-col items-center justify-center w-12 h-14 shrink-0 cursor-pointer ${t.voted ? 'inset-on' : ''}`} style={{ color: t.voted ? 'var(--acc)' : 'var(--muted)' }}>
+                    <Icon n="up" s={16} /><span className="tnum text-[13px] font-semibold">{t.votes}</span>
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2 mb-1.5"><span className="tag">{t.tag}</span><span className="text-[12px] text-[color:var(--muted)]">{t.author}, {t.time}</span></div>
+                    <button className="text-left cursor-pointer" onClick={() => setOpen(on ? null : t.id)} aria-expanded={on}>
+                      <h3 className="font-display text-[19px] leading-snug">{t.title}</h3>
+                    </button>
+                    {on && t.body && <p className="mt-2 text-[14px] leading-relaxed text-[#D0D5CE]">{t.body}</p>}
+                    <button onClick={() => setOpen(on ? null : t.id)} className="mt-2 text-[12.5px] text-[color:var(--muted)] hover:text-[color:var(--text)] cursor-pointer inline-flex items-center gap-1.5"><Icon n="chat" s={14} />{t.replies.length} {t.replies.length === 1 ? 'reply' : 'replies'}</button>
+                  </div>
+                </div>
+                {on && (
+                  <div className="mt-4 ml-0 sm:ml-16 space-y-2.5">
+                    {t.replies.map(r => <div key={r.id} className="inset p-3"><div className="text-[12px] text-[color:var(--muted)] mb-1">{r.author}</div><p className="text-[14px] leading-relaxed">{r.text}</p></div>)}
+                    <form onSubmit={e => sendReply(t.id, e)} className="flex gap-2">
+                      <input className="field" placeholder="Write a reply" aria-label="Reply" value={reply[t.id] || ''} onChange={e => setReply({ ...reply, [t.id]: e.target.value })} />
+                      <Btn v="primary" type="submit" aria-label="Send reply"><Icon n="send" s={15} /></Btn>
+                    </form>
+                  </div>
+                )}
+              </Panel>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function LostFound({ S, openForm }) {
+  const { lf, setLf, toast } = S;
+  const [flt, setFlt] = useState('all');
+  const [show, setShow] = useState(!!openForm);
+  const [f, setF] = useState({ type: 'lost', title: '', place: '', note: '' });
+  const list = lf.filter(x => flt === 'all' || x.type === flt);
+  const submit = e => {
+    e.preventDefault();
+    if (!f.title.trim() || !f.place.trim()) return toast('Add what it is and where');
+    setLf([{ id: uid(), ...f, title: f.title.trim(), place: f.place.trim(), time: 'Just now', resolved: false, mine: true }, ...lf]);
+    setF({ type: 'lost', title: '', place: '', note: '' }); setShow(false); toast('Report added locally');
+  };
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2 items-center justify-between">
+        <div className="flex gap-2">{[['all', 'All'], ['lost', 'Lost'], ['found', 'Found']].map(([k, l]) => <Chip key={k} on={flt === k} onClick={() => setFlt(k)}>{l}</Chip>)}</div>
+        <Btn v="primary" onClick={() => setShow(!show)}><Icon n={show ? 'x' : 'plus'} s={16} />{show ? 'Close' : 'Report an item'}</Btn>
+      </div>
+      {show && (
+        <Panel glow className="view">
+          <form onSubmit={submit} className="grid sm:grid-cols-2 gap-3">
+            <div><label className="lbl" htmlFor="lt">I</label><select id="lt" className="field" value={f.type} onChange={e => setF({ ...f, type: e.target.value })}><option value="lost">Lost something</option><option value="found">Found something</option></select></div>
+            <div><label className="lbl" htmlFor="li">Item</label><input id="li" className="field" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} placeholder="Blue water bottle" /></div>
+            <div><label className="lbl" htmlFor="lp">Where</label><input id="lp" className="field" value={f.place} onChange={e => setF({ ...f, place: e.target.value })} placeholder="Library, second floor" /></div>
+            <div><label className="lbl" htmlFor="ln">Identifying detail</label><input id="ln" className="field" value={f.note} onChange={e => setF({ ...f, note: e.target.value })} placeholder="Sticker, scratch, colour" /></div>
+            <div className="sm:col-span-2"><Btn v="primary" type="submit">Post report</Btn></div>
+          </form>
+        </Panel>
+      )}
+      <ul className="grid sm:grid-cols-2 gap-3">
+        {list.map(x => (
+          <li key={x.id}>
+            <Panel className={`h-full ${x.resolved ? 'opacity-55' : ''}`}>
+              <div className="flex items-center gap-2 mb-2"><span className={`tag ${x.type === 'lost' ? 'tag-warn' : 'tag-acc'}`}>{x.type === 'lost' ? 'Lost' : 'Found'}</span>{x.resolved && <span className="tag">Resolved</span>}<span className="text-[12px] text-[color:var(--muted)] ml-auto">{x.time}</span></div>
+              <h3 className="font-display text-[19px] leading-snug">{x.title}</h3>
+              <p className="text-[13px] text-[color:var(--muted)] mt-1 flex items-center gap-1.5"><Icon n="pin" s={14} />{x.place}</p>
+              {x.note && <p className="text-[13.5px] mt-2 leading-relaxed text-[#CBD0C9]">{x.note}</p>}
+              <div className="flex gap-2 mt-4">
+                <Btn sm onClick={() => toast('Demo only: no messaging is connected, so nobody was contacted')} disabled={x.resolved}>{x.type === 'lost' ? 'I found this' : 'This is mine'}</Btn>
+                <Btn sm v="quiet" onClick={() => setLf(lf.map(y => y.id === x.id ? { ...y, resolved: !y.resolved } : y))}>{x.resolved ? 'Reopen' : 'Mark resolved'}</Btn>
+              </div>
+            </Panel>
+          </li>
+        ))}
+      </ul>
+      {list.length === 0 && <Empty>Nothing here. Report an item to start the list.</Empty>}
+    </div>
+  );
+}
+
+function Market({ S }) {
+  const { market, setMarket, profile, toast } = S;
+  const [q, setQ] = useState('');
+  const [cat, setCat] = useState('All');
+  const [sort, setSort] = useState('new');
+  const [show, setShow] = useState(false);
+  const [f, setF] = useState({ title: '', price: '', cat: 'Books', cond: 'Good', desc: '' });
+  let list = market.filter(m => (cat === 'All' || m.cat === cat) && m.title.toLowerCase().includes(q.toLowerCase()));
+  if (sort === 'lo') list = [...list].sort((a, b) => a.price - b.price);
+  if (sort === 'hi') list = [...list].sort((a, b) => b.price - a.price);
+  const submit = e => {
+    e.preventDefault();
+    const p = parseInt(f.price, 10);
+    if (!f.title.trim() || !(p >= 0)) return toast('Add a title and a price in rupees');
+    setMarket([{ id: uid(), title: f.title.trim(), price: p, cat: f.cat, cond: f.cond, desc: f.desc.trim(), seller: `${profile.name} (you)`, saved: false, sold: false, mine: true }, ...market]);
+    setF({ title: '', price: '', cat: 'Books', cond: 'Good', desc: '' }); setShow(false); toast('Listing added locally');
+  };
+  const upd = (id, patch) => setMarket(market.map(m => m.id === id ? { ...m, ...patch } : m));
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap gap-2.5 items-center">
+        <div className="relative flex-1 min-w-[180px]"><span className="absolute left-3 top-1/2 -translate-y-1/2 text-[color:var(--dim)]"><Icon n="search" s={16} /></span><input className="field !pl-9" placeholder="Search listings" value={q} onChange={e => setQ(e.target.value)} aria-label="Search listings" /></div>
+        <select className="field !w-auto" value={sort} onChange={e => setSort(e.target.value)} aria-label="Sort listings"><option value="new">Newest</option><option value="lo">Price, low to high</option><option value="hi">Price, high to low</option></select>
+        <Btn v="primary" onClick={() => setShow(!show)}><Icon n={show ? 'x' : 'plus'} s={16} />{show ? 'Close' : 'List an item'}</Btn>
+      </div>
+      <div className="hscroll flex gap-2">{['All', ...MKT_CATS].map(c => <Chip key={c} on={cat === c} onClick={() => setCat(c)}>{c}</Chip>)}</div>
+      {show && (
+        <Panel glow className="view">
+          <form onSubmit={submit} className="grid sm:grid-cols-2 gap-3">
+            <div><label className="lbl" htmlFor="mt">Title</label><input id="mt" className="field" value={f.title} onChange={e => setF({ ...f, title: e.target.value })} /></div>
+            <div><label className="lbl" htmlFor="mp">Price in rupees</label><input id="mp" inputMode="numeric" className="field" value={f.price} onChange={e => setF({ ...f, price: e.target.value.replace(/\D/g, '') })} /></div>
+            <div><label className="lbl" htmlFor="mc">Category</label><select id="mc" className="field" value={f.cat} onChange={e => setF({ ...f, cat: e.target.value })}>{MKT_CATS.map(c => <option key={c}>{c}</option>)}</select></div>
+            <div><label className="lbl" htmlFor="md">Condition</label><select id="md" className="field" value={f.cond} onChange={e => setF({ ...f, cond: e.target.value })}>{['Like new', 'Good', 'Used'].map(c => <option key={c}>{c}</option>)}</select></div>
+            <div className="sm:col-span-2"><label className="lbl" htmlFor="me">Description</label><textarea id="me" rows={2} className="field" value={f.desc} onChange={e => setF({ ...f, desc: e.target.value })} /></div>
+            <div className="sm:col-span-2"><Btn v="primary" type="submit">Publish listing</Btn></div>
+          </form>
+        </Panel>
+      )}
+      <ul className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
+        {list.map(m => (
+          <li key={m.id}>
+            <Panel className={`h-full flex flex-col ${m.sold ? 'opacity-55' : ''}`}>
+              <div className="flex items-center gap-2 mb-3"><span className="tag">{m.cat}</span><span className="tag">{m.cond}</span>{m.sold && <span className="tag tag-bad">Sold</span>}</div>
+              <h3 className="font-display text-[19px] leading-snug">{m.title}</h3>
+              <div className="font-display text-[28px] tnum mt-1 text-[color:var(--acc)]">₹{m.price.toLocaleString('en-IN')}</div>
+              <p className="text-[13.5px] mt-2 leading-relaxed text-[#CBD0C9] flex-1">{m.desc}</p>
+              <p className="text-[12px] text-[color:var(--muted)] mt-3">Seller: {m.seller}</p>
+              <div className="flex gap-2 mt-3">
+                <Btn sm disabled={m.sold} onClick={() => toast('Demo only: no messaging is connected, so the seller was not contacted')}>Message seller</Btn>
+                <Btn sm v={m.saved ? 'primary' : 'ghost'} aria-pressed={m.saved} aria-label={m.saved ? 'Unsave listing' : 'Save listing'} onClick={() => upd(m.id, { saved: !m.saved })}><Icon n="heart" s={14} />{m.saved ? 'Saved' : 'Save'}</Btn>
+                {m.mine && <Btn sm v="quiet" onClick={() => upd(m.id, { sold: !m.sold })}>{m.sold ? 'Relist' : 'Mark sold'}</Btn>}
+              </div>
+            </Panel>
+          </li>
+        ))}
+      </ul>
+      {list.length === 0 && <Empty>No listings match. Clear the search or list something yourself.</Empty>}
+    </div>
+  );
+}
+
+function Community({ S }) {
+  const { intent, clearIntent } = S;
+  const [sub, setSub] = useState(intent && intent.sub ? intent.sub : 'talk');
+  const openForm = intent && intent.form;
+  useEffect(() => { if (intent) clearIntent(); }, []);
+  const subs = [['talk', 'Discussions', 'chat'], ['lost', 'Lost and found', 'tag'], ['market', 'Marketplace', 'bag']];
+  return (
+    <div>
+      <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
+        <div>
+          <h1 className="font-display text-[34px] sm:text-[40px] leading-none tracking-tight">Campus Community</h1>
+          <p className="text-[13.5px] text-[color:var(--muted)] mt-2 max-w-[60ch]">Posts, replies and listings below are sample content. Anything you add stays in this browser. No server or accounts are connected, so nobody else can see it.</p>
+        </div>
+        <DemoTag />
+      </div>
+      <div className="inset p-1 inline-flex gap-1 mb-5 max-w-full hscroll" role="tablist">
+        {subs.map(([k, l, i]) => (
+          <button key={k} role="tab" aria-selected={sub === k} onClick={() => setSub(k)}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-[10px] text-[13.5px] font-semibold cursor-pointer transition-all whitespace-nowrap"
+            style={sub === k ? { background: 'var(--acc)', color: '#0B0D0C' } : { color: 'var(--muted)' }}><Icon n={i} s={15} />{l}</button>
+        ))}
+      </div>
+      <div key={sub} className="view">
+        {sub === 'talk' && <Discussions S={S} />}
+        {sub === 'lost' && <LostFound S={S} openForm={openForm} />}
+        {sub === 'market' && <Market S={S} />}
+      </div>
+    </div>
+  );
+}
+/* =====================  CAMPUS ASSISTANT (rule-based demo)  ===================== */
+const LOCS = [
+  { k: ['library'], n: 'Central library', info: 'Demo hours: Monday to Friday 8:30 to 20:00, Saturday 9:00 to 17:00.' },
+  { k: ['admin', 'office'], n: 'Admin block' },
+  { k: ['lhc', 'lecture', 'classroom'], n: 'Lecture hall complex' },
+  { k: ['computer centre', 'computer center'], n: 'Computer centre' },
+  { k: ['food', 'canteen', 'mess', 'chai', 'hungry', 'eat'], n: 'Food court' },
+  { k: ['hostel'], n: 'Hostels' },
+  { k: ['ground', 'sports', 'football', 'cricket'], n: 'Sports ground' },
+  { k: ['auditorium'], n: 'Auditorium' },
+  { k: ['health', 'medical', 'doctor'], n: 'Health centre' },
+  { k: ['gate'], n: 'Main gate' },
+  { k: ['sunset', 'view'], n: 'Sunset point' },
+];
+function assist(q, c) {
+  const s = q.toLowerCase();
+  const has = (...k) => k.some(x => s.includes(x));
+  const A = (label, tab) => ({ label, tab });
+  if (has('attendance', 'bunk', 'skip', 'shortage', 'absent', '75')) {
+    const rows = c.att.map(a => ({ a, p: pct(a), sl: slack(a, c.thr) }));
+    const low = rows.filter(r => !r.sl.ok);
+    const best = [...rows].filter(r => r.sl.ok).sort((x, y) => y.sl.n - x.sl.n)[0];
+    let t = low.length ? `Below ${c.thr}% right now: ${low.map(r => `${r.a.name} (${r.p.toFixed(1)}%, attend ${r.sl.n} in a row)`).join('; ')}.` : `Every subject is at or above ${c.thr}%.`;
+    if (best) t += ` Most slack: ${best.a.name}, where you can miss ${best.sl.n} more.`;
+    return { t, src: 'Your attendance log on the dashboard', acts: [A('Open dashboard', 'dashboard')] };
+  }
+  if (has('assignment', 'deadline', 'due', 'homework', 'task')) {
+    const p = c.tasks.filter(t => !t.done).sort((a, b) => new Date(a.due) - new Date(b.due));
+    return { t: p.length ? `You have ${p.length} open: ${p.slice(0, 4).map(t => `${t.title} (${dueLabel(t.due).toLowerCase()})`).join('; ')}.` : 'You have no open tasks. Nice.', src: 'Your task list on the dashboard', acts: [A('Open dashboard', 'dashboard')] };
+  }
+  if (has('event', 'fest', 'happening', 'club', 'this week', 'rsvp')) {
+    const e = [...c.events].sort((a, b) => new Date(a.when) - new Date(b.when)).slice(0, 3);
+    return { t: `Coming up: ${e.map(x => `${x.title} at ${x.place} on ${new Date(x.when).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' })}, ${x.time}`).join('; ')}.`, src: 'Sample events', acts: [A('See all events', 'dashboard')] };
+  }
+  if (has('study', 'exam', 'viva', 'revise', 'flashcard', 'notes', 'summar')) {
+    return { t: `Study Studio has ${c.notes.length} ${c.notes.length === 1 ? 'note' : 'notes'}. Write “Term: definition” lines and it turns them into flashcards and practice questions on your device.`, src: 'Your notes', acts: [A('Open Study Studio', 'studio')] };
+  }
+  if (has('lost', 'found', 'missing')) {
+    const o = c.lf.filter(x => !x.resolved);
+    return { t: `There are ${o.length} open reports (${o.filter(x => x.type === 'lost').length} lost, ${o.filter(x => x.type === 'found').length} found). These are sample entries, and nothing here reaches real students.`, src: 'Sample lost and found board', acts: [A('Open lost and found', 'community')] };
+  }
+  if (has('sell', 'buy', 'marketplace', 'second hand', 'secondhand', 'cycle', 'book')) {
+    const a = c.market.filter(m => !m.sold);
+    return { t: `${a.length} sample listings are open, from ₹${Math.min(...a.map(m => m.price))} to ₹${Math.max(...a.map(m => m.price)).toLocaleString('en-IN')}. Messaging sellers isn’t connected in this demo.`, src: 'Sample marketplace', acts: [A('Open marketplace', 'community')] };
+  }
+  if (has('wifi', 'wi-fi', 'internet', 'portal', 'fee', 'scholarship', 'warden', 'curfew', 'timetable', 'syllabus', 'result')) {
+    return { t: 'That kind of detail isn’t in this demo’s sample data, and I won’t guess at official rules or contacts. A real version would read it from the institute’s own systems. For now, check the official notices.', src: 'Not available in demo' };
+  }
+  const hit = LOCS.find(l => l.k.some(k => s.includes(k)));
+  if (hit) {
+    const pin = c.pins.find(p => p.title.toLowerCase().includes(hit.k[0]) || hit.n.toLowerCase().includes(p.title.toLowerCase().split(' ')[0]));
+    let t = `${hit.n} is drawn on the Campus Explorer sketch (an illustrative layout, not a surveyed map).`;
+    if (hit.info) t += ' ' + hit.info;
+    if (pin) t += ` A student memory is pinned nearby: “${pin.title}”.`;
+    return { t, src: 'Sample campus data', acts: [A('Show on map', 'explorer')] };
+  }
+  if (has('who are you', 'what can you', 'help', 'hello', 'hi ', 'hey') || s.trim() === 'hi') {
+    return { t: 'I’m a small demo assistant. I match keywords in your question against sample campus facts and the data in this app: attendance, tasks, events, places, notes, community boards. There is no language model behind me, so I only know what’s listed.', src: 'About this demo' };
+  }
+  return { t: 'I couldn’t match that to anything in the demo data. Try asking about attendance, deadlines, events, where a place is, lost items, the marketplace or study notes.', src: 'No match' };
+}
+
+function Assistant({ S }) {
+  const { go, att, thr, tasks, events, notes, lf, market, pins } = S;
+  const [msgs, setMsgs] = useState([{ id: 'm0', role: 'bot', t: 'Hi. I can answer questions about the sample campus data and about what’s in this app. What would you like to know?', src: 'Demo assistant' }]);
+  const [v, setV] = useState('');
+  const [busy, setBusy] = useState(false);
+  const box = useRef(null);
+  useEffect(() => { if (box.current) box.current.scrollTop = box.current.scrollHeight; }, [msgs, busy]);
+  const ask = text => {
+    const q = text.trim(); if (!q || busy) return;
+    setMsgs(m => [...m, { id: uid(), role: 'me', t: q }]); setV(''); setBusy(true);
+    setTimeout(() => {
+      const r = assist(q, { att, thr, tasks, events, notes, lf, market, pins });
+      setMsgs(m => [...m, { id: uid(), role: 'bot', ...r }]); setBusy(false);
+    }, 450);
+  };
+  const prompts = ['Which subjects are short on attendance?', 'What is due this week?', 'Where can I get food?', 'What events are coming up?', 'Where is the library?', 'Any lost items posted?'];
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-4 lg:gap-5">
+      <Panel glow className="flex flex-col !p-0 overflow-hidden">
+        <div className="px-[var(--pad)] pt-[var(--pad)] pb-3 border-b border-[color:var(--line)]">
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="font-display text-[30px] leading-none tracking-tight">Campus AI</h1>
+            <span className="tag tag-warn">Demo: no AI connected</span>
+          </div>
+          <p className="text-[13px] text-[color:var(--muted)] mt-2">Answers come from a small built-in set of sample facts plus your data in this app, matched by keyword. It can’t reason, browse or look anything up.</p>
+        </div>
+        <div ref={box} className="h-[420px] sm:h-[460px] overflow-y-auto px-[var(--pad)] py-5 space-y-4" aria-live="polite">
+          {msgs.map(m => (
+            <div key={m.id} className={`msgIn flex ${m.role === 'me' ? 'justify-end' : ''}`}>
+              <div className={`max-w-[88%] sm:max-w-[78%] rounded-2xl px-4 py-3 text-[14.5px] leading-relaxed ${m.role === 'me' ? 'rounded-br-md' : 'rounded-bl-md inset'}`}
+                style={m.role === 'me' ? { background: 'var(--acc)', color: '#0B0D0C' } : {}}>
+                {m.t}
+                {m.role === 'bot' && m.src && <div className="text-[11.5px] mt-2 text-[color:var(--muted)]">Source: {m.src}</div>}
+                {m.acts && <div className="flex flex-wrap gap-2 mt-3">{m.acts.map(a => <Btn key={a.label} sm onClick={() => go(a.tab)}>{a.label}</Btn>)}</div>}
+              </div>
+            </div>
+          ))}
+          {busy && <div className="msgIn inset inline-flex gap-1.5 px-4 py-3 rounded-2xl" aria-label="Assistant is replying">{[0, 1, 2].map(i => <span key={i} className="w-1.5 h-1.5 rounded-full bg-[color:var(--muted)]" style={{ opacity: 0.4 + i * 0.25 }} />)}</div>}
+        </div>
+        <form onSubmit={e => { e.preventDefault(); ask(v); }} className="flex gap-2 p-3 sm:p-4 border-t border-[color:var(--line)]">
+          <input className="field" placeholder="Ask about campus" value={v} onChange={e => setV(e.target.value)} aria-label="Ask a question" />
+          <Btn v="primary" type="submit" disabled={!v.trim() || busy} aria-label="Send"><Icon n="send" s={16} /></Btn>
+        </form>
+      </Panel>
+      <Panel className="lg:self-start">
+        <Head title="Try asking" />
+        <ul className="space-y-2">{prompts.map(p => <li key={p}><button onClick={() => ask(p)} className="inset w-full text-left px-3.5 py-2.5 text-[13.5px] cursor-pointer">{p}</button></li>)}</ul>
+        <div className="mt-5 text-[12.5px] text-[color:var(--dim)] leading-relaxed">Conversation lives in memory and clears when you leave this page.</div>
+      </Panel>
+    </div>
+  );
+}
+
+/* =====================  PROFILE & SETTINGS  ===================== */
+function Row({ title, sub, children }) {
+  return <div className="flex items-center justify-between gap-4 py-3.5 border-b border-[color:var(--line)] last:border-0"><div className="min-w-0"><div className="text-[14px] font-semibold">{title}</div>{sub && <div className="text-[12.5px] text-[color:var(--muted)] mt-0.5">{sub}</div>}</div>{children}</div>;
+}
+function ProfileView({ S }) {
+  const { profile, setProfile, prefs, setPrefs, resetAll, toast } = S;
+  const p = (k, v) => setProfile({ ...profile, [k]: v });
+  const q = (k, v) => setPrefs({ ...prefs, [k]: v });
+  const [confirm, setConfirm] = useState(false);
+  const status = [
+    ['Sign-in and accounts', 'Not connected. There is no login; you are a local guest.', false],
+    ['Database and sync', 'Not connected. Data is kept in this browser only.', false],
+    ['Campus map', 'Hand-drawn illustration. No map provider is connected.', false],
+    ['AI assistant', 'Not connected. Keyword matching over sample data.', false],
+    ['Study tools', 'Work on your device with simple word-frequency rules.', true],
+  ];
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5">
+      <Panel className="lg:col-span-2" glow>
+        <div className="flex items-center gap-4">
+          <Avatar name={profile.name} size={64} />
+          <div className="min-w-0"><h1 className="font-display text-[32px] leading-none tracking-tight truncate">{profile.name}</h1><p className="text-[13px] text-[color:var(--muted)] mt-1.5">Guest profile, saved on this device only</p></div>
+          <div className="ml-auto hidden sm:block"><DemoTag text="Demo profile" /></div>
+        </div>
+      </Panel>
+      <Panel>
+        <Head title="Your details" sub="These appear on the dashboard and when you post." />
+        <div className="space-y-3">
+          {[['name', 'Name'], ['branch', 'Branch'], ['year', 'Year and semester'], ['roll', 'Roll number (demo)'], ['hostel', 'Residence'], ['cgpa', 'CGPA']].map(([k, l]) => (
+            <div key={k}><label className="lbl" htmlFor={'pf' + k}>{l}</label><input id={'pf' + k} className="field" value={profile[k]} onChange={e => p(k, e.target.value)} /></div>
+          ))}
+          <div><label className="lbl" htmlFor="pfbio">About you</label><textarea id="pfbio" rows={3} className="field" value={profile.bio} onChange={e => p('bio', e.target.value)} /></div>
+        </div>
+      </Panel>
+      <div className="space-y-4 lg:space-y-5">
+        <Panel>
+          <Head title="Preferences" />
+          <Row title="Attendance requirement" sub={`Used for warnings and “can miss” counts`}><span className="font-display text-[22px] tnum">{prefs.thr}%</span></Row>
+          <div className="py-3 border-b border-[color:var(--line)]"><input type="range" min="60" max="85" step="1" value={prefs.thr} onChange={e => q('thr', +e.target.value)} aria-label="Attendance requirement" /></div>
+          <Row title="Reduce motion" sub="Turns off animations and transitions"><Switch on={prefs.reduce} set={v => q('reduce', v)} label="Reduce motion" /></Row>
+          <Row title="Compact layout" sub="Tighter panel padding"><Switch on={prefs.compact} set={v => q('compact', v)} label="Compact layout" /></Row>
+          <Row title="Deadline reminders" sub="Preference is saved, but no notifications are sent in this demo"><Switch on={prefs.notify} set={v => q('notify', v)} label="Deadline reminders" /></Row>
+          <div className="pt-3.5">
+            <div className="text-[14px] font-semibold mb-2.5">Accent colour</div>
+            <div className="flex gap-2.5">
+              {ACCENTS.map((a, i) => (
+                <button key={a.n} onClick={() => q('acc', i)} aria-pressed={prefs.acc === i} className="inset flex items-center gap-2 px-3 py-2 text-[13px] cursor-pointer" style={prefs.acc === i ? { borderColor: a.h } : {}}>
+                  <span className="w-3.5 h-3.5 rounded-full" style={{ background: a.h }} />{a.n}
+                </button>
+              ))}
+            </div>
+          </div>
+        </Panel>
+        <Panel>
+          <Head title="What is actually connected" sub="Nothing here is wired to a real service." />
+          <ul className="space-y-2.5">
+            {status.map(([t, d, ok]) => (
+              <li key={t} className="flex gap-3 items-start">
+                <span className={`tag mt-0.5 shrink-0 ${ok ? 'tag-acc' : ''}`}>{ok ? 'Local' : 'Off'}</span>
+                <div><div className="text-[14px] font-semibold">{t}</div><div className="text-[12.5px] text-[color:var(--muted)]">{d}</div></div>
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-wrap gap-2 mt-5">
+            <Btn disabled title="Authentication isn't connected in this demo"><Icon n="shield" s={15} />Sign in with institute email</Btn>
+            {!confirm ? <Btn v="ghost" onClick={() => setConfirm(true)}><Icon n="trash" s={15} />Reset demo data</Btn> : (
+              <><Btn v="primary" onClick={() => { resetAll(); setConfirm(false); toast('Demo data restored'); }}>Yes, reset everything</Btn><Btn v="quiet" onClick={() => setConfirm(false)}>Keep my data</Btn></>
+            )}
+          </div>
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
+/* =====================  APP SHELL  ===================== */
+const NAV = [
+  { k: 'dashboard', l: 'Dashboard', s: 'Home', i: 'home' },
+  { k: 'explorer', l: 'Campus Explorer', s: 'Map', i: 'map' },
+  { k: 'studio', l: 'Study Studio', s: 'Study', i: 'book' },
+  { k: 'community', l: 'Campus Community', s: 'Community', i: 'users' },
+  { k: 'assistant', l: 'Campus AI', s: 'Ask', i: 'spark' },
+  { k: 'profile', l: 'Profile', s: 'You', i: 'user' },
+];
+
+function App() {
+  const [tab, setTab] = useState('dashboard');
+  const [intent, setIntent] = useState(null);
+  const [profile, setProfile] = useStored('profile', seedProfile);
+  const [prefs, setPrefs] = useStored('prefs', seedPrefs);
+  const [att, setAtt] = useStored('att', seedAtt);
+  const [tasks, setTasks] = useStored('tasks', seedTasks);
+  const [events, setEvents] = useStored('events', seedEvents);
+  const [notes, setNotes] = useStored('notes', seedNotes);
+  const [pins, setPins] = useStored('pins', seedPins);
+  const [threads, setThreads] = useStored('threads', seedThreads);
+  const [lf, setLf] = useStored('lf', seedLF);
+  const [market, setMarket] = useStored('market', seedMarket);
+  const [toastMsg, setToastMsg] = useState('');
+  const tt = useRef(null);
+  const toast = useCallback(m => { setToastMsg(m); clearTimeout(tt.current); tt.current = setTimeout(() => setToastMsg(''), 2800); }, []);
+  const go = useCallback((k, i) => { setTab(k); setIntent(i || null); window.scrollTo({ top: 0 }); }, []);
+  const resetAll = () => { setProfile(seedProfile()); setPrefs(seedPrefs()); setAtt(seedAtt()); setTasks(seedTasks()); setEvents(seedEvents()); setNotes(seedNotes()); setPins(seedPins()); setThreads(seedThreads()); setLf(seedLF()); setMarket(seedMarket()); };
+
+  useEffect(() => {
+    const a = ACCENTS[prefs.acc] || ACCENTS[0], r = document.documentElement;
+    r.style.setProperty('--acc', a.h); r.style.setProperty('--acc-rgb', a.r);
+    r.classList.toggle('rm', !!prefs.reduce); r.classList.toggle('compact', !!prefs.compact);
+  }, [prefs]);
+
+  const S = { profile, setProfile, prefs, setPrefs, thr: prefs.thr, att, setAtt, tasks, setTasks, events, setEvents, notes, setNotes, pins, setPins, threads, setThreads, lf, setLf, market, setMarket, go, toast, resetAll, intent, clearIntent: () => setIntent(null) };
+  const cur = NAV.find(n => n.k === tab);
+
+  const NavBtn = ({ n, side }) => {
+    const on = tab === n.k;
+    return side ? (
+      <button onClick={() => go(n.k)} aria-current={on ? 'page' : undefined} className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-[14px] font-semibold cursor-pointer transition-all text-left"
+        style={on ? { background: 'rgba(var(--acc-rgb),.1)', color: 'var(--acc)', boxShadow: 'inset 0 0 0 1px rgba(var(--acc-rgb),.35)' } : { color: 'var(--muted)' }}>
+        <Icon n={n.i} />{n.l}
+      </button>
+    ) : (
+      <button onClick={() => go(n.k)} aria-current={on ? 'page' : undefined} className="flex-1 flex flex-col items-center gap-1 py-2.5 text-[10.5px] font-semibold cursor-pointer" style={{ color: on ? 'var(--acc)' : 'var(--muted)' }}>
+        <Icon n={n.i} s={20} sw={on ? 2 : 1.7} />{n.s}
+      </button>
+    );
+  };
+
+  return (
+    <div className="min-h-screen lg:flex">
+      <aside className="hidden lg:flex flex-col w-[264px] shrink-0 sticky top-0 h-screen p-5 border-r border-[color:var(--line)]" style={{ background: 'rgba(11,13,12,.6)', backdropFilter: 'blur(14px)' }}>
+        <div className="px-2 pt-2 pb-7">
+          <div className="font-display text-[30px] leading-none tracking-tight">Campus<span className="text-[color:var(--acc)]">OS</span></div>
+          <div className="text-[12.5px] text-[color:var(--muted)] mt-2">NIT Hamirpur student demo</div>
+        </div>
+        <nav className="space-y-1.5" aria-label="Main">{NAV.map(n => <NavBtn key={n.k} n={n} side />)}</nav>
+        <div className="mt-auto inset p-3.5 text-[12.5px] leading-relaxed text-[color:var(--muted)]">
+          <div className="text-[color:var(--text)] font-semibold mb-1">Demo build</div>
+          Sample data throughout. Not affiliated with or connected to the institute. Your edits stay in this browser.
+        </div>
+      </aside>
+
+      <div className="flex-1 min-w-0">
+        <header className="lg:hidden sticky z-30 flex items-center justify-between px-4 py-3 border-b border-[color:var(--line)]" style={{ top: 'env(safe-area-inset-top, 0px)', background: 'rgba(11,13,12,.82)', backdropFilter: 'blur(14px)' }}>
+          <div className="font-display text-[24px] leading-none tracking-tight">Campus<span className="text-[color:var(--acc)]">OS</span></div>
+          <DemoTag text="Demo build" />
+        </header>
+        <main className="mx-auto max-w-[1200px] px-4 sm:px-6 lg:px-10 pt-5 lg:pt-10 pb-28 lg:pb-14">
+          {tab !== 'dashboard' && tab !== 'community' && tab !== 'assistant' && (
+            <div className="mb-6"><h1 className="font-display text-[34px] sm:text-[44px] leading-none tracking-tight">{cur.l}</h1></div>
+          )}
+          <div key={tab} className="view">
+            {tab === 'dashboard' && <Dashboard S={S} />}
+            {tab === 'explorer' && <Explorer S={S} />}
+            {tab === 'studio' && <Studio S={S} />}
+            {tab === 'community' && <Community S={S} />}
+            {tab === 'assistant' && <Assistant S={S} />}
+            {tab === 'profile' && <ProfileView S={S} />}
+          </div>
+        </main>
+      </div>
+
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 flex border-t border-[color:var(--line)]" aria-label="Main" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)', background: 'rgba(11,13,12,.9)', backdropFilter: 'blur(16px)' }}>
+        {NAV.map(n => <NavBtn key={n.k} n={n} />)}
+      </nav>
+
+      <div role="status" aria-live="polite" className="fixed left-1/2 -translate-x-1/2 bottom-24 lg:bottom-8 z-50 px-4 w-full max-w-[460px] pointer-events-none">
+        {toastMsg && <div className="view glass glow !rounded-2xl px-4 py-3 text-[13.5px] text-center" style={{ background: 'rgba(18,21,19,.94)' }}>{toastMsg}</div>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>

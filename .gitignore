@@ -1,5 +1,8 @@
+venv/
 .venv/
+env/
 __pycache__/
 *.py[cod]
-campusos.db
 .env
+.env.*
+!.env.example

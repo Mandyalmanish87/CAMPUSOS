@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NIT Hamirpur 3D Campus Map</title>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:#0B0D0C;color:#ECEFEA;font-family:'Hanken Grotesk',system-ui,sans-serif;overflow:hidden}
+  #canvas-container{position:relative;width:100%;height:100%}
+  #three-canvas{display:block;width:100%;height:100%}
+
+  /* Controls overlay */
+  #map-controls{position:absolute;top:12px;left:12px;display:flex;flex-direction:column;gap:8px;z-index:10}
+  .map-btn{width:34px;height:34px;background:rgba(18,21,19,.9);border:1px solid rgba(255,255,255,.15);border-radius:10px;
+    color:#ECEFEA;font-size:18px;cursor:pointer;display:grid;place-items:center;transition:all .2s;backdrop-filter:blur(8px)}
+  .map-btn:hover{border-color:rgba(200,255,69,.5);color:#C8FF45}
+
+  /* Tooltip / info card */
+  #map-tooltip{position:absolute;bottom:0;left:0;right:0;background:rgba(18,21,19,.95);border-top:1px solid rgba(255,255,255,.1);
+    padding:16px 20px;transform:translateY(100%);transition:transform .3s cubic-bezier(.25,.8,.25,1);z-index:20;
+    display:flex;align-items:flex-start;gap:16px;backdrop-filter:blur(12px)}
+  #map-tooltip.visible{transform:translateY(0)}
+  #tooltip-cat{font-size:11px;padding:3px 9px;border-radius:999px;border:1px solid;margin-bottom:8px;display:inline-block}
+  #tooltip-title{font-size:18px;font-weight:700;margin-bottom:6px;line-height:1.2}
+  #tooltip-desc{font-size:13px;opacity:.75;line-height:1.6;max-width:560px}
+  #tooltip-status{font-size:11px;opacity:.45;margin-top:6px}
+  #tooltip-close{margin-left:auto;background:transparent;border:none;color:#ECEFEA;font-size:20px;cursor:pointer;opacity:.6;padding:4px;line-height:1}
+  #tooltip-close:hover{opacity:1}
+
+  /* Loading / error */
+  #map-overlay{position:absolute;inset:0;display:grid;place-items:center;background:rgba(11,13,12,.9);z-index:30;
+    font-size:14px;color:rgba(152,160,153,.8)}
+  #map-overlay.hidden{display:none}
+
+  /* Legend */
+  #map-legend{position:absolute;top:12px;right:12px;background:rgba(18,21,19,.9);border:1px solid rgba(255,255,255,.1);
+    border-radius:14px;padding:12px 14px;z-index:10;font-size:12px;backdrop-filter:blur(8px);max-width:180px}
+  .legend-item{display:flex;align-items:center;gap:8px;margin-bottom:6px;white-space:nowrap}
+  .legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+
+  /* No-WebGL fallback */
+  #webgl-fallback{display:none;padding:20px;text-align:center}
+  #webgl-fallback.show{display:block}
+</style>
+</head>
+<body>
+<div id="canvas-container">
+  <canvas id="three-canvas"></canvas>
+
+  <!-- Controls -->
+  <div id="map-controls">
+    <button class="map-btn" id="btn-reset" title="Reset view">⌂</button>
+    <button class="map-btn" id="btn-zoom-in" title="Zoom in">+</button>
+    <button class="map-btn" id="btn-zoom-out" title="Zoom out">−</button>
+    <button class="map-btn" id="btn-top" title="Top-down view">⊙</button>
+  </div>
+
+  <!-- Legend -->
+  <div id="map-legend">
+    <div style="font-size:11px;opacity:.5;margin-bottom:8px;font-weight:600">CATEGORIES</div>
+    <div id="legend-items"></div>
+  </div>
+
+  <!-- Info tooltip -->
+  <div id="map-tooltip">
+    <div style="flex:1;min-width:0">
+      <span id="tooltip-cat"></span>
+      <div id="tooltip-title"></div>
+      <div id="tooltip-desc"></div>
+      <div id="tooltip-status"></div>
+    </div>
+    <button id="tooltip-close">✕</button>
+  </div>
+
+  <!-- Overlay -->
+  <div id="map-overlay">
+    <div>Loading campus map…</div>
+  </div>
+  <div id="webgl-fallback">
+    <p style="color:#FF7A6B;font-size:15px;font-weight:600">WebGL not available</p>
+    <p style="margin-top:8px;opacity:.7">Your browser or device does not support WebGL required for the 3D view.<br>Please use the 2D sketch view instead.</p>
+  </div>
+</div>
+
+<script src="/static/vendor/three.min.js"></script>
+<script src="/static/vendor/OrbitControls.js"></script>
+<script>
+(function(){
+  // Check WebGL
+  try{
+    const test = document.createElement('canvas');
+    if(!test.getContext('webgl') && !test.getContext('webgl2')){throw new Error('no webgl');}
+  }catch(e){
+    document.getElementById('map-overlay').classList.add('hidden');
+    document.getElementById('webgl-fallback').classList.add('show');
+    document.getElementById('three-canvas').style.display='none';
+    window.parent && window.parent.postMessage({type:'campusMap3D',status:'no-webgl'},'*');
+    return;
+  }
+
+  const CAT_COLORS={
+    Academic:'#7DF3E1', Administrative:'#FFC24D', Hostels:'#FF9F7A',
+    Dining:'#FF7A6B', Sports:'#A0E060', Spots:'#E5A4FF', Services:'#98A099'
+  };
+
+  let campusData = null;
+  let scene, camera, renderer, controls;
+  let buildingMeshes = [];
+  let selectedMesh = null;
+  let raycaster, mouse;
+  const GROUND_COLOR = 0x111612;
+  const PATH_COLOR = 0x2A3028;
+
+  // Load campus data
+  fetch('/static/data/campus_data.json')
+    .then(r => r.json())
+    .then(data => { campusData = data; initScene(); })
+    .catch(err => {
+      console.error('Failed to load campus data:', err);
+      document.getElementById('map-overlay').querySelector('div').textContent =
+        'Failed to load campus data. Is the server running?';
+    });
+
+  function initScene(){
+    const canvas = document.getElementById('three-canvas');
+    const container = document.getElementById('canvas-container');
+
+    // Renderer
+    renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setClearColor(0x0B0D0C);
+    resizeRenderer();
+
+    // Scene
+    scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x0B0D0C, 800, 2000);
+
+    // Camera — perspective, looking at campus from SE
+    camera = new THREE.PerspectiveCamera(45, canvas.clientWidth / canvas.clientHeight, 1, 3000);
+    camera.position.set(500, 420, 500);
+    camera.lookAt(0, 0, 0);
+
+    // Orbit controls
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.maxPolarAngle = Math.PI / 2.1;
+    controls.minDistance = 80;
+    controls.maxDistance = 1200;
+    controls.target.set(0, 20, 0);
+    controls.update();
+
+    // Lights
+    const ambient = new THREE.AmbientLight(0x9FB8A8, 0.7);
+    scene.add(ambient);
+
+    const sun = new THREE.DirectionalLight(0xFFF8E0, 1.6);
+    sun.position.set(400, 600, 300);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 2000;
+    sun.shadow.camera.left = -700;
+    sun.shadow.camera.right = 700;
+    sun.shadow.camera.top = 700;
+    sun.shadow.camera.bottom = -700;
+    scene.add(sun);
+
+    const fill = new THREE.DirectionalLight(0x7AB4C8, 0.4);
+    fill.position.set(-300, 200, -400);
+    scene.add(fill);
+
+    // Ground plane (green, like NIT's pine campus)
+    const groundGeo = new THREE.PlaneGeometry(2000, 2000);
+    const groundMat = new THREE.MeshLambertMaterial({ color: 0x152010 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI / 2;
+    ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Terrain grid lines (subtle)
+    const gridHelper = new THREE.GridHelper(2000, 40, 0x1A2A1A, 0x1A2A1A);
+    gridHelper.position.y = 0.1;
+    scene.add(gridHelper);
+
+    // Roads / paths
+    buildRoads();
+
+    // Buildings
+    buildBuildings();
+
+    // Horizon hills (simplified ridgeline to evoke Hamirpur's hill setting)
+    buildHorizon();
+
+    // Legend
+    buildLegend();
+
+    // Raycaster for click detection
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
+
+    // Events
+    renderer.domElement.addEventListener('click', onCanvasClick);
+    renderer.domElement.addEventListener('touchend', onTouchEnd, {passive: true});
+    window.addEventListener('resize', resizeRenderer);
+
+    // Controls
+    document.getElementById('btn-reset').addEventListener('click', resetView);
+    document.getElementById('btn-zoom-in').addEventListener('click', ()=>zoomCamera(-80));
+    document.getElementById('btn-zoom-out').addEventListener('click', ()=>zoomCamera(80));
+    document.getElementById('btn-top').addEventListener('click', topView);
+    document.getElementById('tooltip-close').addEventListener('click', closeTooltip);
+
+    // Message API for parent frame
+    window.addEventListener('message', onMessage);
+
+    // Hide overlay and start loop
+    document.getElementById('map-overlay').classList.add('hidden');
+    animate();
+
+    // Notify parent
+    window.parent && window.parent.postMessage({type:'campusMap3D',status:'ready'},'*');
+  }
+
+  function buildRoads(){
+    if(!campusData || !campusData.roads) return;
+    const roadMat = new THREE.MeshLambertMaterial({color: PATH_COLOR});
+    campusData.roads.forEach(road => {
+      const pts = road.points3d;
+      if(!pts || pts.length < 2) return;
+      for(let i = 0; i < pts.length - 1; i++){
+        const a = new THREE.Vector3(...pts[i]);
+        const b = new THREE.Vector3(...pts[i+1]);
+        const dir = b.clone().sub(a);
+        const len = dir.length();
+        const mid = a.clone().add(b).divideScalar(2);
+        const geo = new THREE.BoxGeometry(len, 1.5, 7);
+        const mesh = new THREE.Mesh(geo, roadMat);
+        mesh.position.copy(mid);
+        mesh.position.y = 0.5;
+        mesh.lookAt(b.x, mid.y, b.z);
+        mesh.receiveShadow = true;
+        scene.add(mesh);
+      }
+    });
+  }
+
+  function buildBuildings(){
+    if(!campusData || !campusData.locations) return;
+    campusData.locations.forEach(loc => {
+      if(!loc.coords3d || !loc.dimensions3d) return;
+      const [cx, cy, cz] = loc.coords3d;
+      const [w, h, d] = loc.dimensions3d;
+      const color = CAT_COLORS[loc.category] || '#98A099';
+
+      // Base footprint (slightly darker)
+      const baseGeo = new THREE.BoxGeometry(w + 2, 2, d + 2);
+      const baseMat = new THREE.MeshLambertMaterial({color: darken(color, 0.3)});
+      const base = new THREE.Mesh(baseGeo, baseMat);
+      base.position.set(cx, 1, cz);
+      base.receiveShadow = true;
+      scene.add(base);
+
+      // Main building body
+      const geo = new THREE.BoxGeometry(w, h, d);
+      const mat = new THREE.MeshLambertMaterial({
+        color: new THREE.Color(color).multiplyScalar(0.55),
+        transparent: true,
+        opacity: 0.92,
+      });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(cx, h / 2 + 2, cz);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.userData = { locationId: loc.id, locationData: loc, origColor: color };
+      scene.add(mesh);
+      buildingMeshes.push(mesh);
+
+      // Roof accent strip
+      const roofGeo = new THREE.BoxGeometry(w + 1, 1.5, d + 1);
+      const roofMat = new THREE.MeshLambertMaterial({color: new THREE.Color(color).multiplyScalar(0.85)});
+      const roof = new THREE.Mesh(roofGeo, roofMat);
+      roof.position.set(cx, h + 2.75, cz);
+      roof.castShadow = true;
+      scene.add(roof);
+
+      // Floating label sprite
+      addLabel(loc.shortName || loc.name, cx, h + 10, cz, color);
+    });
+  }
+
+  function addLabel(text, x, y, z, color){
+    const canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 48;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, 256, 48);
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.beginPath();
+    ctx.roundRect(2, 2, 252, 44, 8);
+    ctx.fill();
+    ctx.fillStyle = color;
+    ctx.font = 'bold 16px Hanken Grotesk, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text.length > 22 ? text.slice(0, 21) + '…' : text, 128, 24);
+    const tex = new THREE.CanvasTexture(canvas);
+    const mat = new THREE.SpriteMaterial({map: tex, transparent: true, depthTest: false});
+    const sprite = new THREE.Sprite(mat);
+    sprite.position.set(x, y, z);
+    sprite.scale.set(60, 12, 1);
+    scene.add(sprite);
+  }
+
+  function buildHorizon(){
+    // Stylised ridge silhouette to evoke Hamirpur hills
+    const hillMat = new THREE.MeshLambertMaterial({color: 0x0D1A0F, transparent: true, opacity: 0.8});
+    const ridgePoints = [
+      [-900, 0], [-700, 120], [-500, 80], [-300, 160], [-100, 100], [100, 180], [300, 140], [500, 90], [700, 150], [900, 0]
+    ];
+    for(let i = 0; i < ridgePoints.length - 1; i++){
+      const [ax, ah] = ridgePoints[i];
+      const [bx, bh] = ridgePoints[i + 1];
+      const shape = new THREE.Shape();
+      shape.moveTo(ax, -5);
+      shape.lineTo(ax, ah);
+      shape.lineTo(bx, bh);
+      shape.lineTo(bx, -5);
+      shape.closePath();
+      const extGeo = new THREE.ExtrudeGeometry(shape, {depth: 50, bevelEnabled: false});
+      const hill = new THREE.Mesh(extGeo, hillMat);
+      hill.position.set(0, 0, -700);
+      hill.rotation.x = Math.PI / 2;
+      scene.add(hill);
+    }
+  }
+
+  function buildLegend(){
+    const container = document.getElementById('legend-items');
+    container.innerHTML = '';
+    Object.entries(CAT_COLORS).forEach(([cat, col]) => {
+      const div = document.createElement('div');
+      div.className = 'legend-item';
+      div.innerHTML = `<span class="legend-dot" style="background:${col}"></span><span>${cat}</span>`;
+      container.appendChild(div);
+    });
+  }
+
+  // ── Interaction ─────────────────────────────────────────
+
+  function getMouseNDC(event){
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  }
+
+  function onCanvasClick(event){
+    getMouseNDC(event);
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(buildingMeshes);
+    if(hits.length > 0){
+      selectBuilding(hits[0].object);
+    } else {
+      closeTooltip();
+    }
+  }
+
+  function onTouchEnd(event){
+    if(event.changedTouches.length === 0) return;
+    const t = event.changedTouches[0];
+    const rect = renderer.domElement.getBoundingClientRect();
+    mouse.x = ((t.clientX - rect.left) / rect.width) * 2 - 1;
+    mouse.y = -((t.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(mouse, camera);
+    const hits = raycaster.intersectObjects(buildingMeshes);
+    if(hits.length > 0) selectBuilding(hits[0].object);
+  }
+
+  function selectBuilding(mesh){
+    // Reset previous
+    if(selectedMesh && selectedMesh !== mesh){
+      selectedMesh.material.emissive && (selectedMesh.material.emissive.setHex(0));
+      selectedMesh.material.opacity = 0.92;
+    }
+    selectedMesh = mesh;
+    mesh.material.emissive = new THREE.Color(0x223318);
+    mesh.material.opacity = 1;
+
+    const loc = mesh.userData.locationData;
+    if(!loc) return;
+
+    // Pan camera toward it
+    controls.target.set(loc.coords3d[0], 0, loc.coords3d[2]);
+    const camOffset = new THREE.Vector3(loc.coords3d[0] + 80, 80, loc.coords3d[2] + 80);
+    camera.position.lerp(camOffset, 0.5);
+    controls.update();
+
+    // Show tooltip
+    const col = CAT_COLORS[loc.category] || '#98A099';
+    const catEl = document.getElementById('tooltip-cat');
+    catEl.textContent = loc.category;
+    catEl.style.color = col;
+    catEl.style.borderColor = col;
+    document.getElementById('tooltip-title').textContent = loc.name;
+    document.getElementById('tooltip-desc').textContent = loc.description || '';
+    document.getElementById('tooltip-status').textContent =
+      '⚑ ' + (loc.status === 'verified_landmark' ? 'Verified campus landmark' : 'Approximate position');
+    document.getElementById('map-tooltip').classList.add('visible');
+
+    // Notify parent frame
+    window.parent && window.parent.postMessage({
+      type: 'campusMap3D', status: 'selected', locationId: loc.id, locationData: loc
+    }, '*');
+  }
+
+  function closeTooltip(){
+    document.getElementById('map-tooltip').classList.remove('visible');
+    if(selectedMesh){
+      selectedMesh.material.emissive && (selectedMesh.material.emissive.setHex(0));
+      selectedMesh.material.opacity = 0.92;
+      selectedMesh = null;
+    }
+    window.parent && window.parent.postMessage({type:'campusMap3D',status:'deselected'},'*');
+  }
+
+  // ── Camera helpers ─────────────────────────────────────
+
+  function resetView(){
+    camera.position.set(500, 420, 500);
+    controls.target.set(0, 20, 0);
+    controls.update();
+  }
+
+  function topView(){
+    camera.position.set(0, 700, 0.01);
+    controls.target.set(0, 0, 0);
+    controls.update();
+  }
+
+  function zoomCamera(delta){
+    const dir = camera.position.clone().sub(controls.target).normalize();
+    camera.position.addScaledVector(dir, delta);
+    controls.update();
+  }
+
+  function resizeRenderer(){
+    const container = document.getElementById('canvas-container');
+    const w = container.clientWidth, h = container.clientHeight;
+    if(renderer){
+      renderer.setSize(w, h, false);
+    }
+    if(camera){
+      camera.aspect = w / h;
+      camera.updateProjectionMatrix();
+    }
+  }
+
+  // ── Message API (for parent React frame) ────────────────
+
+  function onMessage(e){
+    if(!e.data || e.data.type !== 'campusMap3DCmd') return;
+    const cmd = e.data;
+    if(cmd.action === 'selectLocation'){
+      const mesh = buildingMeshes.find(m => m.userData.locationId === cmd.locationId);
+      if(mesh) selectBuilding(mesh);
+    } else if(cmd.action === 'reset'){
+      resetView();
+    } else if(cmd.action === 'topView'){
+      topView();
+    } else if(cmd.action === 'filterCategory'){
+      filterByCategory(cmd.category);
+    }
+  }
+
+  function filterByCategory(category){
+    buildingMeshes.forEach(mesh => {
+      const loc = mesh.userData.locationData;
+      const show = !category || category === 'All' || loc.category === category;
+      mesh.visible = show;
+    });
+  }
+
+  // ── Utility ───────────────────────────────────────────
+
+  function darken(hexStr, amount){
+    const c = new THREE.Color(hexStr);
+    return c.multiplyScalar(1 - amount);
+  }
+
+  function animate(){
+    requestAnimationFrame(animate);
+    controls.update();
+    renderer.render(scene, camera);
+  }
+
+})();
+</script>
+</body>
+</html>
